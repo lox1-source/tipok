@@ -1,0 +1,357 @@
+[gd_scene format=3 uid="uid://3lhywrp46t1a"]
+
+[ext_resource type="Texture2D" uid="uid://bv1ekfvge2sfb" path="res://assets/sprites/furniture/bed_bottom.png" id="bed_bottom"]
+[ext_resource type="Texture2D" uid="uid://b1vkahcy0ecth" path="res://assets/sprites/furniture/chair.png" id="chair"]
+[ext_resource type="Texture2D" uid="uid://cu1x1rtt34osf" path="res://assets/sprites/furniture/desk-sheet-concept.png" id="desk"]
+[ext_resource type="Texture2D" uid="uid://ch67dgqb28a45" path="res://assets/sprites/room/environment_nightstand.png" id="env_nightstand"]
+[ext_resource type="Texture2D" uid="uid://665orw07h76g" path="res://assets/sprites/room/environment_rug.png" id="env_rug"]
+[ext_resource type="Texture2D" uid="uid://cvrjupnqm1pub" path="res://assets/sprites/room/environment_window.png" id="env_window"]
+[ext_resource type="Script" uid="uid://64r8s3n0mmyq" path="res://scripts/room_layout.gd" id="layout"]
+[ext_resource type="Script" uid="uid://dywx87fhgvnmk" path="res://scripts/room_lighting.gd" id="lighting"]
+[ext_resource type="Script" uid="uid://b447n2c3d6che" path="res://scripts/player_shadow.gd" id="player_shadow"]
+[ext_resource type="Texture2D" uid="uid://dtqg05nv4m0gi" path="res://assets/sprites/furniture/poster.png" id="poster"]
+[ext_resource type="Texture2D" uid="uid://bi45m6o8evlxo" path="res://assets/sprites/furniture/room_books.png" id="room_books"]
+[ext_resource type="Texture2D" uid="uid://bufvu33uyotb4" path="res://assets/sprites/furniture/room_drafts.png" id="room_drafts"]
+[ext_resource type="Texture2D" uid="uid://cywn4ov6unjcs" path="res://assets/sprites/furniture/room_plant.png" id="room_plant"]
+[ext_resource type="Texture2D" uid="uid://ebqhmywi5yvc" path="res://assets/sprites/furniture/side-table.png" id="side_table"]
+[ext_resource type="Texture2D" uid="uid://b3x0gc5110kyh" path="res://assets/sprites/furniture/wardrobe-sheet.png" id="wardrobe"]
+
+[sub_resource type="Gradient" id="room_light_falloff"]
+offsets = PackedFloat32Array(0, 0.2, 0.6, 1)
+colors = PackedColorArray(1, 1, 1, 1, 0.65, 0.65, 0.65, 1, 0.15, 0.15, 0.15, 1, 0, 0, 0, 1)
+
+[sub_resource type="GradientTexture2D" id="room_light_texture"]
+gradient = SubResource("room_light_falloff")
+width = 256
+height = 256
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(0.5, 0)
+
+[sub_resource type="RectangleShape2D" id="horizontal"]
+size = Vector2(480, 32)
+
+[sub_resource type="RectangleShape2D" id="vertical"]
+size = Vector2(32, 224)
+
+[sub_resource type="CircleShape2D" id="feet"]
+radius = 8.0
+
+[sub_resource type="RectangleShape2D" id="bed_shape"]
+size = Vector2(54, 125)
+
+[sub_resource type="OccluderPolygon2D" id="shadow_bed"]
+polygon = PackedVector2Array(-24, -96, 24, -96, 24, 7, -24, 7)
+
+[sub_resource type="RectangleShape2D" id="desk_shape"]
+size = Vector2(120, 56)
+
+[sub_resource type="AtlasTexture" id="desk_off"]
+atlas = ExtResource("desk")
+region = Rect2(0, 0, 128, 64)
+
+[sub_resource type="AtlasTexture" id="desk_on"]
+atlas = ExtResource("desk")
+region = Rect2(0, 64, 128, 64)
+
+[sub_resource type="SpriteFrames" id="computer_animation"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("desk_off")
+}, {
+"duration": 1.0,
+"texture": SubResource("desk_on")
+}],
+"loop": 1,
+"name": &"screen",
+"speed": 2.0
+}]
+
+[sub_resource type="OccluderPolygon2D" id="shadow_desk"]
+polygon = PackedVector2Array(-56, -45, -42.00076, -44.999996, -42, -62, 16, -62, 16, -45, 35, -45, 35, -49, 56, -49, 56, -2, -56, -2)
+
+[sub_resource type="RectangleShape2D" id="wardrobe_shape"]
+size = Vector2(54, 66)
+
+[sub_resource type="AtlasTexture" id="wardrobe_closed"]
+atlas = ExtResource("wardrobe")
+region = Rect2(0, 0, 64, 128)
+
+[sub_resource type="AtlasTexture" id="wardrobe_open"]
+atlas = ExtResource("wardrobe")
+region = Rect2(64, 0, 64, 128)
+
+[sub_resource type="SpriteFrames" id="wardrobe_states"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("wardrobe_closed")
+}, {
+"duration": 1.0,
+"texture": SubResource("wardrobe_open")
+}],
+"loop": 0,
+"name": &"doors",
+"speed": 1.0
+}]
+
+[sub_resource type="OccluderPolygon2D" id="shadow_wardrobe"]
+polygon = PackedVector2Array(-27, -128, 27, -128, 27, 0, -27, 0)
+
+[sub_resource type="RectangleShape2D" id="chair_shape"]
+size = Vector2(28, 14)
+
+[sub_resource type="OccluderPolygon2D" id="shadow_chair"]
+polygon = PackedVector2Array(-17, -33, 17, -33, 17, -3, -17, -3)
+
+[sub_resource type="RectangleShape2D" id="side_table_shape"]
+size = Vector2(30, 46)
+
+[sub_resource type="OccluderPolygon2D" id="shadow_side_table"]
+polygon = PackedVector2Array(-16, -74, 16, -74, 16, -9, -16, -9)
+
+[sub_resource type="OccluderPolygon2D" id="shadow_nightstand"]
+polygon = PackedVector2Array(-12, -49, 7, -49, 4, -34, -9, -34)
+
+[node name="Room" type="Node2D" unique_id=1407798533]
+y_sort_enabled = true
+
+[node name="Background" type="Node2D" parent="." unique_id=1343678588]
+z_index = -10
+script = ExtResource("layout")
+
+[node name="Atmosphere" type="Node2D" parent="." unique_id=1124068411]
+z_index = -5
+script = ExtResource("lighting")
+
+[node name="Ambient" type="CanvasModulate" parent="Atmosphere" unique_id=1212938849]
+color = Color(0.78, 0.78, 0.84, 1)
+
+[node name="Moonlight" type="PointLight2D" parent="Atmosphere" unique_id=1181801460]
+texture_filter = 2
+position = Vector2(436, 154)
+color = Color(0.62, 0.72, 1, 1)
+energy = 0.32
+shadow_enabled = true
+shadow_filter = 1
+shadow_filter_smooth = 1.5
+shadow_item_cull_mask = 3
+texture = SubResource("room_light_texture")
+texture_scale = 2.25
+
+[node name="MonitorLight" type="PointLight2D" parent="Atmosphere" unique_id=1453279549]
+texture_filter = 2
+position = Vector2(513, 190)
+color = Color(0.6, 0.76, 1, 1)
+energy = 0.17
+shadow_enabled = true
+shadow_filter = 1
+shadow_filter_smooth = 1.5
+texture = SubResource("room_light_texture")
+texture_scale = 1.1
+
+[node name="SystemUnitLight" type="PointLight2D" parent="Atmosphere" unique_id=941471810]
+texture_filter = 2
+position = Vector2(571, 208)
+color = Color(0.85, 0.62, 0.41, 1)
+energy = 0.55
+shadow_enabled = true
+shadow_filter = 1
+shadow_filter_smooth = 1.5
+texture = SubResource("room_light_texture")
+
+[node name="WallTop" type="StaticBody2D" parent="." unique_id=896601397]
+position = Vector2(480, 168)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WallTop" unique_id=2090080133]
+shape = SubResource("horizontal")
+
+[node name="WallBottom" type="StaticBody2D" parent="." unique_id=938339114]
+position = Vector2(480, 424)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WallBottom" unique_id=1633072815]
+shape = SubResource("horizontal")
+
+[node name="WallLeft" type="StaticBody2D" parent="." unique_id=599165251]
+position = Vector2(240, 296)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WallLeft" unique_id=397576645]
+shape = SubResource("vertical")
+
+[node name="WallRight" type="StaticBody2D" parent="." unique_id=117466692]
+position = Vector2(720, 296)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WallRight" unique_id=909745644]
+shape = SubResource("vertical")
+
+[node name="Player" type="CharacterBody2D" parent="." unique_id=449022602]
+position = Vector2(450, 340)
+motion_mode = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player" unique_id=1814966531]
+position = Vector2(0, -6)
+shape = SubResource("feet")
+
+[node name="PlayerShadow" type="Polygon2D" parent="Player" unique_id=631182008]
+color = Color(0, 0, 0, 0.28)
+polygon = PackedVector2Array(-11, -3, -7, -6, 7, -6, 11, -3, 11, 1, 7, 4, -7, 4, -11, 1)
+script = ExtResource("player_shadow")
+
+[node name="Bed" type="StaticBody2D" parent="." unique_id=534304308 groups=["interactable"]]
+position = Vector2(300, 312)
+metadata/object_id = "bed"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Bed" unique_id=1709348218]
+position = Vector2(0, -65.5)
+shape = SubResource("bed_shape")
+
+[node name="BedBottomSprite" type="Sprite2D" parent="Bed" unique_id=1192673479]
+position = Vector2(2.5, -52)
+scale = Vector2(1.015625, 1)
+texture = ExtResource("bed_bottom")
+
+[node name="LightOccluder" type="LightOccluder2D" parent="Bed" unique_id=1428852213]
+position = Vector2(0, -12)
+occluder = SubResource("shadow_bed")
+
+[node name="Computer" type="StaticBody2D" parent="." unique_id=735588930 groups=["interactable"]]
+position = Vector2(526, 240)
+metadata/object_id = "computer"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Computer" unique_id=231946199]
+position = Vector2(0, -28)
+shape = SubResource("desk_shape")
+
+[node name="DeskSprite" type="AnimatedSprite2D" parent="Computer" unique_id=1178986445]
+position = Vector2(0, -32)
+sprite_frames = SubResource("computer_animation")
+animation = &"screen"
+
+[node name="LightOccluder" type="LightOccluder2D" parent="Computer" unique_id=1793725963]
+occluder = SubResource("shadow_desk")
+occluder_light_mask = 2
+
+[node name="Wardrobe" type="StaticBody2D" parent="." unique_id=437394761 groups=["interactable"]]
+position = Vector2(662, 250)
+metadata/object_id = "wardrobe"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Wardrobe" unique_id=1781828702]
+position = Vector2(0, -33)
+shape = SubResource("wardrobe_shape")
+
+[node name="WardrobeSprite" type="AnimatedSprite2D" parent="Wardrobe" unique_id=689415701]
+position = Vector2(0, -64)
+sprite_frames = SubResource("wardrobe_states")
+animation = &"doors"
+
+[node name="LightOccluder" type="LightOccluder2D" parent="Wardrobe" unique_id=1523709431]
+occluder = SubResource("shadow_wardrobe")
+
+[node name="Chair" type="StaticBody2D" parent="." unique_id=840703587]
+position = Vector2(526, 293)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Chair" unique_id=1120197984]
+position = Vector2(-14, -21)
+shape = SubResource("chair_shape")
+
+[node name="ChairSprite" type="Sprite2D" parent="Chair" unique_id=1573182507]
+position = Vector2(-13.000001, -35)
+scale = Vector2(0.72, 0.72)
+texture = ExtResource("chair")
+
+[node name="LightOccluder" type="LightOccluder2D" parent="Chair" unique_id=249005236]
+position = Vector2(-13, -24)
+occluder = SubResource("shadow_chair")
+
+[node name="SideTable" type="StaticBody2D" parent="." unique_id=384838471]
+position = Vector2(646, 380)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="SideTable" unique_id=198583515]
+position = Vector2(0, -23)
+shape = SubResource("side_table_shape")
+
+[node name="SideTableSprite" type="Sprite2D" parent="SideTable" unique_id=1056621967]
+position = Vector2(0, -38.4)
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("side_table")
+
+[node name="Pizza" type="Node2D" parent="SideTable" unique_id=243811428 groups=["interactable"]]
+position = Vector2(0, -54)
+metadata/object_id = "pizza"
+
+[node name="Phone" type="Node2D" parent="SideTable" unique_id=1766070047 groups=["interactable"]]
+position = Vector2(0, -24)
+metadata/object_id = "phone"
+
+[node name="LightOccluder" type="LightOccluder2D" parent="SideTable" unique_id=1008117283]
+occluder = SubResource("shadow_side_table")
+
+[node name="Poster" type="Node2D" parent="." unique_id=941622886 groups=["interactable"]]
+position = Vector2(356, 186)
+metadata/object_id = "poster"
+
+[node name="Frame" type="Polygon2D" parent="Poster" unique_id=1506218865]
+position = Vector2(0, -5.0000005)
+scale = Vector2(0.85, 0.85)
+color = Color(0.06, 0.06, 0.09, 1)
+polygon = PackedVector2Array(-18, -72, 18, -72, 18, -4, -18, -4)
+
+[node name="PosterSprite" type="Sprite2D" parent="Poster" unique_id=2144313428]
+position = Vector2(0, -37)
+scale = Vector2(0.85, 0.85)
+texture = ExtResource("poster")
+
+[node name="Plant" type="Sprite2D" parent="." unique_id=1786463797 groups=["interactable"]]
+texture_filter = 1
+position = Vector2(409, 172.99997)
+scale = Vector2(0.72, 0.72)
+texture = ExtResource("room_plant")
+metadata/object_id = "plant"
+
+[node name="Nightstand" type="Node2D" parent="." unique_id=1546637201]
+position = Vector2(370, 350)
+
+[node name="Sprite" type="Sprite2D" parent="Nightstand" unique_id=1611954499]
+visible = false
+position = Vector2(0, -47)
+scale = Vector2(0.4, 0.4)
+texture = ExtResource("env_nightstand")
+
+[node name="Drafts" type="Sprite2D" parent="Nightstand" unique_id=41854130 groups=["interactable"]]
+visible = false
+texture_filter = 1
+position = Vector2(103, -141)
+scale = Vector2(0.3, 0.3)
+texture = ExtResource("room_drafts")
+metadata/object_id = "drafts"
+
+[node name="Books" type="Sprite2D" parent="Nightstand" unique_id=931000584 groups=["interactable"]]
+visible = false
+texture_filter = 1
+position = Vector2(248, -158.00002)
+scale = Vector2(0.4, 0.4)
+texture = ExtResource("room_books")
+metadata/object_id = "books"
+
+[node name="LightOccluder" type="LightOccluder2D" parent="Nightstand" unique_id=1706945448]
+position = Vector2(42, -124)
+occluder = SubResource("shadow_nightstand")
+
+[node name="WindowSprite" type="Sprite2D" parent="." unique_id=1383936551]
+z_index = -8
+texture_filter = 1
+position = Vector2(436, 147)
+scale = Vector2(0.9, 0.44)
+texture = ExtResource("env_window")
+
+[node name="RugSprite" type="Sprite2D" parent="." unique_id=1699240387]
+z_index = -9
+texture_filter = 1
+position = Vector2(489, 337)
+scale = Vector2(1.15, 1)
+texture = ExtResource("env_rug")
+
+[node name="RoomCamera" type="Camera2D" parent="." unique_id=1557345174]
+position = Vector2(480, 256)
+zoom = Vector2(1.2, 1.2)

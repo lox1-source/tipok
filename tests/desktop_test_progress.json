@@ -1,0 +1,101 @@
+{
+	"active_chapter": 0,
+	"chapter_one_evidence": [],
+	"chapter_one_stage": 0,
+	"chapter_two_complete": false,
+	"consultations": 0,
+	"copied_code": false,
+	"dialogue_checkpoint": {
+		"entries": [
+			{
+				"emotion": "neutral",
+				"portraits": {},
+				"side": "left",
+				"speaker": "СЦЕНА",
+				"speaker_id": "narrator",
+				"text": "Сообщение готово. Осталось познакомиться.\nГрат поправляет футболку перед монитором."
+			},
+			{
+				"emotion": "happy",
+				"portraits": {
+					"left": {
+						"emotion": "happy",
+						"speaker_id": "grat"
+					}
+				},
+				"side": "left",
+				"speaker": "Грат",
+				"speaker_id": "grat",
+				"text": "Ну эта-то точно сделает.\nНа экране появляется надпись: «Grok печатает…»"
+			}
+		],
+		"flow": "grok",
+		"index": 0,
+		"pending_evidence": ""
+	},
+	"examined": [],
+	"intro_seen": true,
+	"minigame_checkpoint": {},
+	"notebook_page": 0,
+	"player_position": {
+		"x": 450.0,
+		"y": 340.0
+	},
+	"scene": "res://Prologue.tscn",
+	"step": 7,
+	"story": {
+		"decisions": {},
+		"values": {
+			"affection_artbay": 0,
+			"affection_gpt": 0,
+			"affection_grok": 0,
+			"amd_chef_achievement": false,
+			"artbay_evidence": false,
+			"artbay_intro_seen": false,
+			"artbay_suspicion": 0,
+			"artbay_trust": false,
+			"artbay_trust_level": 0,
+			"backup_candidate": false,
+			"bad_key_export": false,
+			"bios_memory_kept": false,
+			"brainstorm_completed": false,
+			"chapter_five_complete": false,
+			"chapter_four_complete": false,
+			"chapter_three_complete": false,
+			"compared_characters_often": false,
+			"comparison_count": 0,
+			"court_evidence_quality": 0,
+			"defender_interrupted": false,
+			"defused_tab_war": false,
+			"dinner_finished": false,
+			"dinner_read_manual": false,
+			"exploration_all_seen": false,
+			"exploration_three_seen": false,
+			"fast_money": false,
+			"game_backup_created": false,
+			"gpt_boundaries": false,
+			"gpt_trust": false,
+			"grok_date_completed": false,
+			"grok_trust": false,
+			"grok_without_key": false,
+			"honest_final_choice": false,
+			"key_txt_received": false,
+			"learned_blender": false,
+			"lied_in_court": false,
+			"lies_count": 0,
+			"model_game_completed": false,
+			"old_project_notes_found": false,
+			"project_access_shared": false,
+			"project_backup_snapshot": {},
+			"project_ownership_proven": false,
+			"secret_protocol": false,
+			"stamp_obtained": false,
+			"stamp_stolen": false,
+			"tab_war_completed": false,
+			"tab_war_result": {},
+			"tab_war_won": false
+		},
+		"version": 1
+	},
+	"version": 2
+}

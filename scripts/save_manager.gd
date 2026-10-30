@@ -4,16 +4,54 @@ const SAVE_PATH := "user://grat_prologue_v1.json"
 const CURRENT_VERSION := 2
 
 var launch_mode := "direct"
+var dev_chapter := 0
+var dev_session := false
+var dev_call_event := ""
+var reopen_dev_picker := false
 var last_error := ""
 var save_path := SAVE_PATH
 
 func set_launch_mode(value: String) -> void:
 	launch_mode = value if value in ["new", "continue", "direct"] else "direct"
+	dev_session = false
 
 func consume_launch_mode() -> String:
 	var value := launch_mode
 	launch_mode = "direct"
 	return value
+
+func set_dev_chapter(chapter: int) -> void:
+	dev_chapter = clampi(chapter, 0, 7)
+	dev_call_event = ""
+	dev_session = dev_chapter > 0
+	launch_mode = "direct"
+
+func consume_dev_chapter() -> int:
+	var value := dev_chapter
+	dev_chapter = 0
+	return value
+
+func set_dev_call_event(event_id: String) -> void:
+	dev_chapter = 0
+	dev_call_event = event_id if event_id in ["call_drx", "call_tables", "call_palych"] else ""
+	dev_session = not dev_call_event.is_empty()
+	launch_mode = "direct"
+
+func consume_dev_call_event() -> String:
+	var value := dev_call_event
+	dev_call_event = ""
+	return value
+
+func request_dev_picker_reopen() -> void:
+	reopen_dev_picker = true
+
+func consume_dev_picker_reopen() -> bool:
+	var value := reopen_dev_picker
+	reopen_dev_picker = false
+	return value
+
+func is_dev_session() -> bool:
+	return dev_session
 
 func has_save() -> bool:
 	return FileAccess.file_exists(save_path)
@@ -23,6 +61,8 @@ func has_valid_save() -> bool:
 
 func save_game(data: Dictionary) -> bool:
 	last_error = ""
+	if dev_session:
+		return true
 	var payload := data.duplicate(true)
 	payload["version"] = CURRENT_VERSION
 	var file := FileAccess.open(save_path, FileAccess.WRITE)

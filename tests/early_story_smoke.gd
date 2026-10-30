@@ -16,10 +16,18 @@ func make_game() -> Variant:
 	return instance
 func click(text: String) -> void:
 	for child in game.app_panel.get_children():
-		if child is Button and child.text == text:
+		if child is Button and button_caption(child) == text:
 			child.pressed.emit()
 			return
 	check(false,"Button exists: "+text)
+
+func button_caption(button: Button) -> String:
+	if not button.text.is_empty():
+		return button.text
+	for child in button.get_children():
+		if child is Label:
+			return child.text
+	return ""
 func finish() -> void:
 	var guard := 0
 	while game.dialogue_open and guard < 350:
@@ -125,6 +133,20 @@ func run() -> void:
 		finish()
 	check(game.story.get_value("exploration_three_seen") and game.story.get_value("old_project_notes_found"),"Room exploration reveals the extra conversation and old project")
 	check(game.story.get_value("gpt_trust") and game.story.get_value("gpt_boundaries"),"Respectful answer establishes JBT trust and boundaries")
+	game.active_chapter = 2
+	var chapter_two_room: Array = game.Early.room_entries(game,"bed")
+	var has_bios_bed_moment := false
+	for entry in chapter_two_room:
+		if str(entry.get("text","")).contains("аналоговой"):
+			has_bios_bed_moment = true
+	check(has_bios_bed_moment,"Returning to the room in chapter 2 reveals a BIOS-date reaction")
+	game.active_chapter = 7
+	var chapter_seven_room: Array = game.Early.room_entries(game,"pizza")
+	var has_final_build_moment := false
+	for entry in chapter_seven_room:
+		if str(entry.get("text","")).contains("после релиза"):
+			has_final_build_moment = true
+	check(has_final_build_moment,"Room interactions react to the final build chapter")
 	await capture("early-room")
 
 	# Legacy save: BIOS finished, no new story state existed.
@@ -144,6 +166,7 @@ func run() -> void:
 	game = make_game()
 	game.resume_game()
 	check(game.story.get_value("grok_date_completed") and not game.chapter_two_complete,"Legacy BIOS completion is preserved with a new postscript pending")
+	game.call_event_schedule.clear()
 	game.start_chapter_two()
 	check(game.flow == "chapter_two_artrey","Legacy continuation opens Artrey, not the entire BIOS date")
 	await capture("early-artrey")

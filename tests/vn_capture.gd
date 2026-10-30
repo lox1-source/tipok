@@ -9,6 +9,10 @@ func run() -> void:
 	root.add_child(game)
 	await process_frame
 	game.start_vn_demo()
+	if game.vn.phone_chat_mode:
+		push_error("Диалог с ЖБТ и Гроком ошибочно переключился в режим телефона")
+		quit(1)
+		return
 	await process_frame
 	game.vn.advance()
 	for _i in range(24):

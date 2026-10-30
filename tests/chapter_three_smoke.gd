@@ -25,7 +25,18 @@ func run() -> void:
 	root.add_child(g)
 	for branch in range(3):
 		g._reset_progress()
+		g.call_event_schedule.clear()
 		g.start_chapter_three()
+		check(g.mode == "room" and g.chapter_computer_pending == 3,"Chapter 3 starts in the room and waits for the computer")
+		g.nearby_object = "computer"
+		g._interact()
+		check(g.mode == "desktop" and g.mode != "tab_war","The minigame does not start when the chapter is entered")
+		var launch_card: Control = g.computer_panel.get_node("ChapterLaunchCard")
+		for child in launch_card.get_children():
+			if child is Button:
+				child.pressed.emit()
+				break
+		check(g.flow == "chapter_computer_boot","The computer action opens a short preparation scene")
 		drive(g,branch)
 		check(g.mode == "tab_war","Every introduction branch reaches the real minigame")
 		g.tab_war.choose_side("grok" if branch != 1 else "jbt")

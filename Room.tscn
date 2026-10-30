@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://3lhywrp46t1a"]
 
 [ext_resource type="Texture2D" uid="uid://bv1ekfvge2sfb" path="res://assets/sprites/furniture/bed_bottom.png" id="bed_bottom"]
-[ext_resource type="Texture2D" uid="uid://b1vkahcy0ecth" path="res://assets/sprites/furniture/chair.png" id="chair"]
+[ext_resource type="Texture2D" uid="uid://clwfqobo2s4lj" path="res://assets/sprites/furniture/chair_v2.png" id="chair"]
 [ext_resource type="Texture2D" uid="uid://cu1x1rtt34osf" path="res://assets/sprites/furniture/desk-sheet-concept.png" id="desk"]
 [ext_resource type="Texture2D" uid="uid://ch67dgqb28a45" path="res://assets/sprites/room/environment_nightstand.png" id="env_nightstand"]
 [ext_resource type="Texture2D" uid="uid://665orw07h76g" path="res://assets/sprites/room/environment_rug.png" id="env_rug"]
@@ -9,8 +9,8 @@
 [ext_resource type="Script" uid="uid://64r8s3n0mmyq" path="res://scripts/room_layout.gd" id="layout"]
 [ext_resource type="Script" uid="uid://dywx87fhgvnmk" path="res://scripts/room_lighting.gd" id="lighting"]
 [ext_resource type="Script" uid="uid://b447n2c3d6che" path="res://scripts/player_shadow.gd" id="player_shadow"]
+[ext_resource type="Texture2D" uid="uid://bgoohjqepadwa" path="res://assets/sprites/furniture/poshalka.png" id="polaroid_photo"]
 [ext_resource type="Texture2D" uid="uid://dtqg05nv4m0gi" path="res://assets/sprites/furniture/poster.png" id="poster"]
-[ext_resource type="Texture2D" uid="uid://bi45m6o8evlxo" path="res://assets/sprites/furniture/room_books.png" id="room_books"]
 [ext_resource type="Texture2D" uid="uid://bufvu33uyotb4" path="res://assets/sprites/furniture/room_drafts.png" id="room_drafts"]
 [ext_resource type="Texture2D" uid="uid://cywn4ov6unjcs" path="res://assets/sprites/furniture/room_plant.png" id="room_plant"]
 [ext_resource type="Texture2D" uid="uid://ebqhmywi5yvc" path="res://assets/sprites/furniture/side-table.png" id="side_table"]
@@ -241,6 +241,7 @@ position = Vector2(0, -33)
 shape = SubResource("wardrobe_shape")
 
 [node name="WardrobeSprite" type="AnimatedSprite2D" parent="Wardrobe" unique_id=689415701]
+modulate = Color(0.71, 0.71, 0.71, 1)
 position = Vector2(0, -64)
 sprite_frames = SubResource("wardrobe_states")
 animation = &"doors"
@@ -252,7 +253,7 @@ occluder = SubResource("shadow_wardrobe")
 position = Vector2(526, 293)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Chair" unique_id=1120197984]
-position = Vector2(-14, -21)
+position = Vector2(-13, -21)
 shape = SubResource("chair_shape")
 
 [node name="ChairSprite" type="Sprite2D" parent="Chair" unique_id=1573182507]
@@ -298,11 +299,13 @@ color = Color(0.06, 0.06, 0.09, 1)
 polygon = PackedVector2Array(-18, -72, 18, -72, 18, -4, -18, -4)
 
 [node name="PosterSprite" type="Sprite2D" parent="Poster" unique_id=2144313428]
+modulate = Color(0.72, 0.72, 0.72, 1)
 position = Vector2(0, -37)
 scale = Vector2(0.85, 0.85)
 texture = ExtResource("poster")
 
 [node name="Plant" type="Sprite2D" parent="." unique_id=1786463797 groups=["interactable"]]
+modulate = Color(0.69, 0.69, 0.69, 1)
 texture_filter = 1
 position = Vector2(409, 172.99997)
 scale = Vector2(0.72, 0.72)
@@ -326,13 +329,14 @@ scale = Vector2(0.3, 0.3)
 texture = ExtResource("room_drafts")
 metadata/object_id = "drafts"
 
-[node name="Books" type="Sprite2D" parent="Nightstand" unique_id=931000584 groups=["interactable"]]
+[node name="Polaroid" type="Sprite2D" parent="Nightstand" unique_id=931000584 groups=["interactable"]]
 visible = false
-texture_filter = 1
-position = Vector2(248, -158.00002)
-scale = Vector2(0.4, 0.4)
-texture = ExtResource("room_books")
-metadata/object_id = "books"
+texture_filter = 2
+position = Vector2(248, -169)
+rotation = -0.0698132
+scale = Vector2(0.045, 0.045)
+texture = ExtResource("polaroid_photo")
+metadata/object_id = "polaroid"
 
 [node name="LightOccluder" type="LightOccluder2D" parent="Nightstand" unique_id=1706945448]
 position = Vector2(42, -124)

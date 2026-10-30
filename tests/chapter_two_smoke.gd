@@ -37,6 +37,7 @@ func run() -> void:
 	root.add_child(game)
 	await process_frame
 	game._reset_progress()
+	game.call_event_schedule.clear()
 	game.intro_seen = true
 	game.step = 8
 	game.chapter_one_stage = 2
@@ -74,6 +75,7 @@ func run() -> void:
 	check(int(game.story.get_value("affection_grok")) == before,"Repeating a choice cannot farm affection")
 	game.flow = ""
 	game._reset_progress()
+	game.call_event_schedule.clear()
 	game.intro_seen = true
 	game.step = 8
 	game.chapter_one_stage = 2

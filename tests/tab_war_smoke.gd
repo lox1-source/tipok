@@ -63,7 +63,12 @@ func run() -> void:
 	var game: Variant = load("res://Prologue.tscn").instantiate()
 	game.save_path = "res://tests/tab_war_progress_temp.json"
 	root.add_child(game)
+	game.call_event_schedule.clear()
 	game.start_chapter_three()
+	game.nearby_object = "computer"
+	game._interact()
+	check(game.mode == "desktop" and game.chapter_computer_pending == 3,"Entering chapter 3 opens the computer before the minigame")
+	game._launch_pending_chapter()
 	drive_dialogue(game)
 	check(game.mode == "tab_war" and game.tab_war.state.phase == "select","Chapter introduction opens side selection")
 	check(not achievements.has_achievement("tab_war"),"Dialogue alone does not award the minigame achievement")

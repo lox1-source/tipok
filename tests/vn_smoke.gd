@@ -18,6 +18,7 @@ func run() -> void:
 	await process_frame
 	var dialogue = game.vn
 	check(dialogue.visible and game.dialogue_open, "VN demo opens")
+	check(dialogue._compact_dialogue_text("Строка 1\n\nСтрока 2\n\n\nСтрока 3") == "Строка 1\nСтрока 2\nСтрока 3", "Extra blank lines are collapsed in dialogue text")
 	check(dialogue.is_revealing(), "First line starts in typewriter mode")
 	var first_index: int = dialogue.index
 	dialogue.advance()
@@ -39,6 +40,16 @@ func run() -> void:
 	check(dialogue._slots["left"].size() == 2 and dialogue._slots["right"].size() == 2, "Each side has a crossfade pair")
 	check(dialogue._slots["left"][0].flip_h == false and dialogue._slots["right"][0].flip_h == false, "Portraits use authored directions, no blind mirroring")
 	check(dialogue._slots["left"][1].texture == null and dialogue._slots["right"][1].texture == null, "Emotion swaps never overlap two portrait textures")
+	check(dialogue._dialogue_window_layer.visible, "Authored dialogue panel is visible in VN mode")
+	check(dialogue._text.scroll_active and dialogue._text.clip_contents, "Authored text scrolling and clipping remain enabled")
+	check(dialogue._silhouette_shadows["left"].texture != null, "Authored portrait silhouette is present")
+	var phone_entries: Array = game.Early.artrey_intro()
+	game.flow = "chapter_two_artrey"
+	game._start_dialogue_entries(phone_entries, 1)
+	check(dialogue.phone_chat_mode and not dialogue._dialogue_window_layer.visible, "Artrey phone mode hides the ordinary VN panel")
+	check(dialogue._silhouette_shadows["left"].texture == null and dialogue._silhouette_shadows["right"].texture == null, "Phone mode has no leftover portrait silhouettes")
+	game.start_vn_demo()
+	check(not dialogue.phone_chat_mode and dialogue._dialogue_window_layer.visible, "Returning to VN restores the authored panel")
 	dialogue.start([{"speaker_id":"narrator", "speaker":"СЦЕНА", "text":"Проверка страницы без аватаров.", "portraits":{}}])
 	check(not dialogue._line_has_portraits, "Portrait halos are disabled on avatar-free dialogue pages")
 	DirAccess.remove_absolute(game.save_path)

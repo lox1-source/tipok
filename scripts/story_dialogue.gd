@@ -7,10 +7,15 @@ static func line(speaker: String, emotion: String, text: String, key: String = "
 		portraits["left"] = {"speaker_id":"grat", "emotion":emotion if speaker == "grat" else "neutral"}
 		if speaker != "grat":
 			portraits["right"] = {"speaker_id":speaker, "emotion":emotion}
-	var result := {"speaker_id":speaker if speaker != "artrey" else "narrator", "speaker":names.get(speaker, speaker), "emotion":emotion, "side":"left" if speaker == "grat" else "right", "text":text, "portraits":portraits}
+	var result := {"speaker_id":speaker, "speaker":names.get(speaker, speaker), "emotion":emotion, "side":"left" if speaker == "grat" else "right", "text":text, "portraits":portraits}
+	result["duration_minutes"] = estimate_minutes(text)
 	if key != "": result["key"] = key
 	if next_key != "": result["next"] = next_key
 	return result
+
+static func estimate_minutes(text: String) -> int:
+	var words := text.replace("\n", " ").strip_edges().split(" ", false).size()
+	return maxi(1, ceili(float(words) / 24.0))
 
 static func choice(text: String, identifier: String, next_key: String) -> Dictionary:
 	return {"text":text, "id":identifier, "next":next_key}

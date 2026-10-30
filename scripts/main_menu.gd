@@ -9,8 +9,10 @@ var achievements_panel: Panel
 var achievement_rows: VBoxContainer
 var achievement_count_label: Label
 var achievement_percent_label: Label
+var dev_chapter_panel: Panel
 var selected_category := "Все"
 var selected_state := "Все"
+var background_art: TextureRect
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -19,52 +21,72 @@ func _ready() -> void:
 	_build_menu()
 	_build_settings()
 	_build_achievements()
+	_build_dev_chapter_picker()
 	AchievementManager.achievements_changed.connect(_refresh_achievements_if_open)
 	AudioManager.set_walking(false)
 	AudioManager.stop_pc_sfx()
 	AudioManager.play_music("menu")
 	_refresh_continue()
+	if SaveManager.consume_dev_picker_reopen():
+		_open_dev_chapter_picker()
 
 func _build_background() -> void:
-	var background := ColorRect.new()
-	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	background.color = Color("090814")
-	add_child(background)
-	var moon_glow := ColorRect.new()
-	moon_glow.position = Vector2(0, 0)
-	moon_glow.size = Vector2(960, 150)
-	moon_glow.color = Color(0.13, 0.12, 0.24, 0.72)
-	background.add_child(moon_glow)
-	for y in range(190, 541, 32):
-		var strip := ColorRect.new()
-		strip.position = Vector2(0, y)
-		strip.size = Vector2(960, 2)
-		strip.color = Color(0.24, 0.19, 0.31, 0.18)
-		background.add_child(strip)
+	background_art = TextureRect.new()
+	background_art.name = "MainMenuArtwork"
+	background_art.texture = load("res://assets/ui/main-menu-keyart.png") as Texture2D
+	background_art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	background_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	background_art.stretch_mode = TextureRect.STRETCH_SCALE
+	background_art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	background_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(background_art)
+	move_child(background_art, 0)
+	var title_plate := Panel.new()
+	title_plate.name = "TitlePlate"
+	title_plate.position = Vector2(40, 12)
+	title_plate.size = Vector2(300, 104)
+	var plate_style := StyleBoxFlat.new()
+	plate_style.bg_color = Color(0.035, 0.025, 0.055, 0.62)
+	plate_style.border_color = Color(0.58, 0.46, 0.68, 0.32)
+	plate_style.set_border_width_all(1)
+	plate_style.set_corner_radius_all(7)
+	plate_style.shadow_color = Color(0.0, 0.0, 0.0, 0.30)
+	plate_style.shadow_size = 8
+	title_plate.add_theme_stylebox_override("panel", plate_style)
+	add_child(title_plate)
+	var rubik_base := load("res://assets/ui/fonts/Rubik-Variable.ttf") as FontFile
+	var title_font := FontVariation.new()
+	title_font.base_font = rubik_base
+	title_font.variation_opentype = {"wght": 700.0}
+	var subtitle_font := FontVariation.new()
+	subtitle_font.base_font = rubik_base
+	subtitle_font.variation_opentype = {"wght": 500.0}
 	var title := Label.new()
 	title.text = "ТИПОЧЕК"
-	title.position = Vector2(86, 92)
-	title.size = Vector2(520, 78)
-	title.add_theme_font_size_override("font_size", 52)
+	title.position = Vector2(56, 20)
+	title.size = Vector2(520, 64)
+	title.add_theme_font_override("font", title_font)
+	title.add_theme_font_size_override("font_size", 42)
 	title.add_theme_color_override("font_color", Color("f0e8ff"))
 	title.add_theme_color_override("font_shadow_color", Color("4b365f"))
-	title.add_theme_constant_override("shadow_offset_x", 3)
-	title.add_theme_constant_override("shadow_offset_y", 4)
-	background.add_child(title)
+	title.add_theme_constant_override("shadow_offset_x", 2)
+	title.add_theme_constant_override("shadow_offset_y", 2)
+	add_child(title)
 	var subtitle := Label.new()
-	subtitle.text = "КЛЮЧ  ·  ПРОЛОГ И ГЛАВЫ 1–3"
-	subtitle.position = Vector2(91, 164)
+	subtitle.text = "КЛЮЧ  ·  ПРОЛОГ И ГЛАВЫ 1–7"
+	subtitle.position = Vector2(61, 77)
 	subtitle.size = Vector2(520, 28)
-	subtitle.add_theme_font_size_override("font_size", 16)
+	subtitle.add_theme_font_override("font", subtitle_font)
+	subtitle.add_theme_font_size_override("font_size", 14)
 	subtitle.add_theme_color_override("font_color", Color("bea9ce"))
-	background.add_child(subtitle)
+	add_child(subtitle)
 
 func _build_menu() -> void:
 	menu_panel = Panel.new()
 	menu_panel.position = Vector2(575, 72)
 	menu_panel.size = Vector2(300, 440)
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.075, 0.06, 0.12, 0.94)
+	style.bg_color = Color(0.075, 0.06, 0.12, 1.0)
 	style.border_color = Color("79668f")
 	style.set_border_width_all(3)
 	style.set_corner_radius_all(7)
@@ -82,9 +104,10 @@ func _build_menu() -> void:
 	_menu_button("Мои достижения", 172, _open_achievements)
 	_menu_button("Настройки", 225, _open_settings)
 	_menu_button("Выйти из игры", 278, func(): get_tree().quit())
+	_menu_button("Выбор главы · DEV", 331, _open_dev_chapter_picker)
 	status_label = Label.new()
-	status_label.position = Vector2(24, 344)
-	status_label.size = Vector2(252, 66)
+	status_label.position = Vector2(24, 383)
+	status_label.size = Vector2(252, 40)
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	status_label.add_theme_font_size_override("font_size", 13)
 	status_label.add_theme_color_override("font_color", Color("c9b6d7"))
@@ -127,7 +150,7 @@ func _build_achievements() -> void:
 	add_child(achievements_panel)
 	var title := _achievement_label("Мои достижения", Vector2(24, 14), Vector2(390, 38), 27, Color("f0e8ff"))
 	achievements_panel.add_child(title)
-	achievement_count_label = _achievement_label("0 / 33", Vector2(438, 16), Vector2(120, 25), 16, Color("e4d2f2"))
+	achievement_count_label = _achievement_label("0 / 35", Vector2(438, 16), Vector2(120, 25), 16, Color("e4d2f2"))
 	achievements_panel.add_child(achievement_count_label)
 	achievement_percent_label = _achievement_label("0%", Vector2(585, 16), Vector2(86, 25), 16, Color("c8b49a"))
 	achievement_percent_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -190,6 +213,79 @@ func _build_achievements() -> void:
 	back.pressed.connect(_close_achievements)
 	achievements_panel.add_child(back)
 	_refresh_achievements()
+
+func _build_dev_chapter_picker() -> void:
+	dev_chapter_panel = Panel.new()
+	dev_chapter_panel.name = "DevChapterPicker"
+	dev_chapter_panel.position = Vector2(126, 24)
+	dev_chapter_panel.size = Vector2(708, 492)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.055, 0.045, 0.09, 0.98)
+	style.border_color = Color("857099")
+	style.set_border_width_all(3)
+	style.set_corner_radius_all(7)
+	dev_chapter_panel.add_theme_stylebox_override("panel", style)
+	dev_chapter_panel.hide()
+	add_child(dev_chapter_panel)
+	dev_chapter_panel.add_child(_achievement_label("ЗАПУСК ГЛАВЫ · DEV", Vector2(24, 18), Vector2(560, 42), 27, Color("f0e8ff")))
+	dev_chapter_panel.add_child(_achievement_label("Тестовый запуск не перезаписывает основное сохранение.", Vector2(26, 62), Vector2(650, 26), 14, Color("c9b6d7")))
+	dev_chapter_panel.add_child(_achievement_label("ЗВОНКИ · ТЕСТОВЫЕ СОБЫТИЯ", Vector2(24, 330), Vector2(650, 24), 14, Color("e4d2f2")))
+	var names := [
+		"Глава 1 · Альтушка на проводе",
+		"Глава 2 · Свидание в BIOS",
+		"Глава 3 · Война вкладок",
+		"Глава 4 · Министерство",
+		"Глава 5 · Суд",
+		"Глава 6 · Архив проекта",
+		"Глава 7 · Последняя сборка"
+	]
+	for index in range(names.size()):
+		var chapter := index + 1
+		var button := Button.new()
+		button.text = names[index]
+		button.position = Vector2(24 + (index % 2) * 330, 106 + int(index / 2) * 55)
+		button.size = Vector2(310, 48)
+		button.add_theme_font_size_override("font_size", 15)
+		button.pressed.connect(_launch_dev_chapter.bind(chapter))
+		dev_chapter_panel.add_child(button)
+	var call_events := [
+		{"id":"call_drx", "title":"Звонок · DRX"},
+		{"id":"call_tables", "title":"Звонок · столы"},
+		{"id":"call_palych", "title":"Звонок · Палыч / WB"}
+	]
+	for index in range(call_events.size()):
+		var call_button := Button.new()
+		call_button.text = str(call_events[index].title)
+		call_button.position = Vector2(24 + index * 220, 354)
+		call_button.size = Vector2(210, 52)
+		call_button.add_theme_font_size_override("font_size", 14)
+		call_button.pressed.connect(_launch_dev_call.bind(str(call_events[index].id)))
+		dev_chapter_panel.add_child(call_button)
+	var back := Button.new()
+	back.text = "Назад"
+	back.position = Vector2(536, 438)
+	back.size = Vector2(140, 34)
+	back.pressed.connect(_close_dev_chapter_picker)
+	dev_chapter_panel.add_child(back)
+
+func _open_dev_chapter_picker() -> void:
+	menu_panel.hide()
+	settings_panel.hide()
+	achievements_panel.hide()
+	dev_chapter_panel.show()
+
+func _close_dev_chapter_picker() -> void:
+	dev_chapter_panel.hide()
+	menu_panel.show()
+	continue_button.grab_focus()
+
+func _launch_dev_chapter(chapter: int) -> void:
+	SaveManager.set_dev_chapter(chapter)
+	get_tree().change_scene_to_file("res://Prologue.tscn")
+
+func _launch_dev_call(event_id: String) -> void:
+	SaveManager.set_dev_call_event(event_id)
+	get_tree().change_scene_to_file("res://Prologue.tscn")
 
 func _achievement_label(value: String, pos: Vector2, area: Vector2, font_size: int, color: Color) -> Label:
 	var label := Label.new()
@@ -288,11 +384,17 @@ func _achievement_card(definition: Dictionary, is_unlocked: bool) -> Control:
 func _open_achievements() -> void:
 	menu_panel.hide()
 	settings_panel.hide()
+	for child in get_children():
+		if child is Control and child != achievements_panel and child != settings_panel and child != dev_chapter_panel:
+			child.hide()
 	_refresh_achievements()
 	achievements_panel.show()
 
 func _close_achievements() -> void:
 	achievements_panel.hide()
+	for child in get_children():
+		if child is Control and child != achievements_panel and child != settings_panel and child != dev_chapter_panel:
+			child.show()
 	menu_panel.show()
 	continue_button.grab_focus()
 
@@ -323,8 +425,8 @@ func _start_new_game() -> void:
 	if not SaveManager.clear_save():
 		status_label.text = SaveManager.last_error
 		return
-	AchievementManager.unlock_achievement("first_launch")
 	SaveManager.set_launch_mode("new")
+	AchievementManager.unlock_achievement("first_launch")
 	get_tree().change_scene_to_file("res://Prologue.tscn")
 
 func _open_settings() -> void:
@@ -337,7 +439,10 @@ func _close_settings() -> void:
 	continue_button.grab_focus()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel") and achievements_panel.visible:
+	if event.is_action_pressed("ui_cancel") and dev_chapter_panel.visible:
+		_close_dev_chapter_picker()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("ui_cancel") and achievements_panel.visible:
 		_close_achievements()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_cancel") and settings_panel.visible:

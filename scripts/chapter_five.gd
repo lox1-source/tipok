@@ -14,7 +14,7 @@ static func opening(values: Dictionary) -> Array:
 		S.line("grat","embarrassed","Да, сначала мне был нужен ключ. Потом я понял, что мне важно с вами разговаривать.","honest","artrey_witness"),
 		S.line("grat","embarrassed","Ваша честь, я подал бы протест, но сначала надо скачать форму протеста.","joke","artrey_witness"),
 		S.line("grat","afraid","Я ни у кого ничего не просил. Вообще.","lie","artrey_witness"),
-		S.line("narrator","neutral",artrey_line,"artrey_witness"),
+		S.line("artrey","neutral",artrey_line,"artrey_witness"),
 		S.line("narrator","neutral",stamp_line),
 		S.line("narrator","neutral","Три пункта дела. На каждом выбери улику, которая действительно подтверждает или опровергает слова свидетеля. Ошибочную улику можно заменить."),
 		S.line("narrator","neutral","Принтер греет ролики. Суд начинается.","court_game")

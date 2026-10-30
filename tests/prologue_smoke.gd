@@ -61,6 +61,9 @@ func run() -> void:
 	check(game.flow=="voice" and game.dialogue_index==0,"One E opens one interaction without skipping a line")
 	finish_dialogue()
 	check(game.step==1,"Voice message unlocks project")
+	check(game.mode=="friends_chat" and game.phone_panel.visible,"Voice message opens the preserved friends phone chat")
+	game._unhandled_input(key_event(KEY_ESCAPE))
+	check(game.mode=="room" and not game.phone_panel.visible,"Esc closes phone chat before using the computer")
 	game.nearby_object="computer"
 	game._unhandled_input(key_event(KEY_E))
 	check(game.mode=="desktop","Computer opens")
@@ -143,8 +146,8 @@ func run() -> void:
 	var chair_collider: CollisionShape2D = game.get_node("Chair/CollisionShape2D")
 	var feet_collider: CollisionShape2D = game.player.get_node("CollisionShape2D")
 	var chair_bottom: float = chair_collider.global_position.y + chair_collider.shape.size.y * 0.5
-	var stop_y: float = chair_bottom + feet_collider.shape.radius - feet_collider.position.y
-	check(game.player.position.y>=stop_y-0.2,"Office chair blocks walking through its base")
+	var chair_stop: float = chair_bottom + feet_collider.shape.radius - feet_collider.position.y
+	check(absf(game.player.position.y-chair_stop)<0.5,"Office chair blocks walking at its current base")
 	game.player.position=Vector2(646,403)
 	Input.parse_input_event(key_event(KEY_W))
 	for i in range(25):
@@ -185,7 +188,15 @@ func run() -> void:
 	for i in range(50):
 		await physics_frame
 	Input.parse_input_event(key_event(KEY_W,false))
-	check(game.player.position.y>=325.8,"New bed footprint blocks movement")
+	# The author's new bed ends at world y=309, rather than the old y=312.
+	# Verify that walking actually reaches and stops at the current footprint.
+	var bed_collision: CollisionShape2D = game.get_node("Bed/CollisionShape2D")
+	var player_collision: CollisionShape2D = game.player.get_node("CollisionShape2D")
+	var bed_rectangle := bed_collision.shape as RectangleShape2D
+	var player_circle := player_collision.shape as CircleShape2D
+	var bed_bottom := (bed_collision.global_transform * Vector2(0, bed_rectangle.size.y * 0.5)).y
+	var expected_stop := bed_bottom + player_circle.radius - player_collision.position.y
+	check(absf(game.player.position.y - expected_stop) < 0.5,"Current bed footprint blocks movement at its lower edge")
 	game.player.position=Vector2(450,340)
 	await screenshot("prologue-room-compact.png")
 	DirAccess.remove_absolute(game.save_path)

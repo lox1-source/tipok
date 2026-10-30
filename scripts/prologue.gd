@@ -1,6 +1,6 @@
 extends "res://scripts/main.gd"
 
-# The playable story inherits Room.tscn; main.gd supplies shared gameplay methods.
+# The original prototype remains in Main.tscn. The prologue uses Room.tscn.
 enum Step { VOICE, PROJECT, BLENDER, HELP, SEARCH, COMPLAIN, PROMPT, GROK, COMPLETE }
 @export var save_path := "user://grat_prologue_v1.json"
 var step: int = Step.VOICE
@@ -12,6 +12,16 @@ var mode := "menu"
 var goal_label: Label
 var chapter_title: Label
 var active_chapter := 0
+var chapter_computer_pending := 0
+var call_event_schedule: Array[Dictionary] = []
+var call_event_completed: Array[String] = []
+var call_event_pending := ""
+var call_event_pending_chapter := 0
+var call_event_schedule_initialized := false
+var narrative_clock_minutes := 3 * 60 + 47
+var narrative_day := 1
+var clock_location := "консультаций: 0"
+var previous_dialogue_duration := 0
 var page_counter: Label
 var sprite: AnimatedSprite2D
 var search_input: LineEdit
@@ -28,6 +38,12 @@ var bios_background: ColorRect
 var chapter_one_evidence: Array[String] = []
 var pending_evidence := ""
 var pause_menu: Control
+var phone_panel: Panel
+var phone_hud_hidden := false
+var credits_screen: Control
+var credits_label: RichTextLabel
+var credits_roll: Tween
+var credits_buttons: Array[Button] = []
 var save_dirty := false
 var saved_player_position := Vector2.ZERO
 const SPAWN_POSITION := Vector2(450,340)
@@ -38,6 +54,27 @@ var dialogue_resume: Dictionary = {}
 var tab_war: Control
 var office_queue: Control
 var court_trial: Control
+var digital_archaeology: Control
+var last_build: Control
+var hint_panel: Panel
+var task_panel: Panel
+var controls_list_label: Label
+var notebook_hint_panel: Panel
+var interaction_prompt: Panel
+var interaction_key_label: Label
+var interaction_action_label: Label
+var interaction_target_label: Label
+var polaroid_overlay: Control
+var polaroid_dim: ColorRect
+var polaroid_image: TextureRect
+
+# Старт глав: пролог — день 1, 03:47; 1 — день 1, 04:15; 2 — день 1, 05:00;
+# 3 — день 1, 06:00; 4 — день 2, 09:00; 5 — день 3, 10:00;
+# 6 — день 5, 12:00 (после 48 часов); 7 — день 6, 19:00.
+# Между строками время идёт по оценочной длине реплики, не по реальному времени чтения.
+const CHAPTER_START_DAY := [1, 1, 1, 1, 2, 3, 5, 6]
+const CHAPTER_START_MINUTES := [227, 255, 300, 360, 540, 600, 720, 1140]
+const DIALOGUE_TIME := preload("res://scripts/story_dialogue.gd")
 
 const FLOW := {
 	"intro": [
@@ -91,6 +128,14 @@ func _ready() -> void:
 	_build_ui()
 	_create_vn()
 	_create_pause_menu()
+	var dev_call_event := SaveManager.consume_dev_call_event()
+	if not dev_call_event.is_empty():
+		_start_dev_call_event(dev_call_event)
+		return
+	var dev_chapter := SaveManager.consume_dev_chapter()
+	if dev_chapter > 0:
+		_start_dev_chapter(dev_chapter)
+		return
 	var launch_mode := SaveManager.consume_launch_mode()
 	if launch_mode == "new":
 		_reset_progress()
@@ -105,6 +150,50 @@ func _ready() -> void:
 		load_progress()
 		refresh_goal()
 		show_menu()
+
+func _start_dev_chapter(chapter: int) -> void:
+	# Build a disposable in-memory story state; the regular user save is untouched.
+	_reset_progress()
+	intro_seen = true
+	step = Step.COMPLETE
+	chapter_one_stage = 2 if chapter >= 2 else 0
+	chapter_two_complete = chapter >= 3
+	var completed_chapters := ["chapter_three_complete", "chapter_four_complete", "chapter_five_complete", "chapter_six_complete"]
+	for index in range(completed_chapters.size()):
+		story.set_value(completed_chapters[index], chapter > index + 3)
+	if chapter >= 3:
+		story.set_value("tab_war_completed", true)
+		story.set_value("tab_war_won", true)
+		story.set_value("defused_tab_war", true)
+	if chapter >= 4:
+		story.set_value("grok_date_completed", true)
+		story.set_value("key_txt_received", true)
+		story.set_value("stamp_obtained", true)
+		story.set_value("secret_protocol", true)
+	if chapter >= 5:
+		story.set_value("project_ownership_proven", true)
+		story.set_value("affection_grok", 3)
+		story.set_value("affection_gpt", 3)
+		story.set_value("affection_artbay", 3)
+	if chapter >= 6:
+		story.set_value("artbay_evidence", true)
+		story.set_value("artbay_contract_signed", true)
+		story.set_value("gpt_boundaries", true)
+		story.set_value("grok_without_key", true)
+	if chapter >= 7:
+		story.set_value("artbay_control_taken", true)
+		story.set_value("lied_in_court", true)
+		story.set_value("lies_count", 2)
+		story.set_value("stamp_stolen", true)
+		story.set_value("honest_final_choice", false)
+	match chapter:
+		1: start_chapter_one()
+		2: start_chapter_two()
+		3: start_chapter_three()
+		4: start_chapter_four()
+		5: start_chapter_five()
+		6: start_chapter_six()
+		7: start_chapter_seven()
 
 func install_character() -> void:
 	for child in player.get_children():
@@ -126,14 +215,31 @@ func text_at(parent: Node, text: String, pos: Vector2, area: Vector2, size_px: i
 	label.position = pos
 	label.size = area
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.clip_text = true
 	label.add_theme_font_size_override("font_size", size_px)
 	label.add_theme_color_override("font_color", color)
 	parent.add_child(label)
 	return label
 
+func _multiline_text_at(parent: Node, value: String, pos: Vector2, area: Vector2, size_px: int = 17, color := Color("eee5fa")) -> RichTextLabel:
+	var label := RichTextLabel.new()
+	label.text = value
+	label.position = pos
+	label.size = area
+	label.bbcode_enabled = false
+	label.fit_content = false
+	label.scroll_active = false
+	label.clip_contents = true
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.add_theme_font_size_override("normal_font_size", size_px)
+	label.add_theme_color_override("default_color", color)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(label)
+	return label
+
 func button_at(parent: Node, text: String, pos: Vector2, area: Vector2, action: Callable) -> Button:
 	var b := Button.new()
-	b.text = text
+	b.text = ""
 	if parent is Control:
 		var bounds: Vector2 = parent.size
 		area.x = minf(area.x, bounds.x - 16.0)
@@ -153,26 +259,86 @@ func button_at(parent: Node, text: String, pos: Vector2, area: Vector2, action: 
 	var hover := style.duplicate() as StyleBoxFlat
 	hover.bg_color = Color("68537b")
 	b.add_theme_stylebox_override("hover", hover)
+	var label := Label.new()
+	label.text = text
+	label.position = Vector2(8, 3)
+	label.size = Vector2(area.x - 16, area.y - 6)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.clip_text = true
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_color_override("font_color", Color("eee5fa"))
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.clip_contents = true
+	b.add_child(label)
 	b.pressed.connect(action)
 	parent.add_child(b)
 	return b
 
+func _add_ending_actions(actions: Array, single_row_y: float = 330.0) -> void:
+	if actions.is_empty():
+		return
+	var columns := actions.size() if actions.size() <= 3 else 2
+	var gap := 12.0
+	var margin := 24.0
+	var button_height := 42.0 if actions.size() <= 3 else 36.0
+	var start_y := single_row_y if actions.size() <= 3 else 314.0
+	var button_width := (app_panel.size.x - margin * 2.0 - gap * (columns - 1)) / columns
+	for index in range(actions.size()):
+		var action: Dictionary = actions[index]
+		var row := int(index / columns)
+		var column := index % columns
+		var position := Vector2(margin + column * (button_width + gap), start_y + row * (button_height + 8.0))
+		button_at(app_panel, str(action.text), position, Vector2(button_width, button_height), action.callback)
+
 func _build_ui() -> void:
 	ui_layer = CanvasLayer.new()
 	add_child(ui_layer)
-	chapter_title = text_at(ui_layer,"ГРАТ / ПРОЛОГ",Vector2(22,12),Vector2(500,35),23)
+	hint_panel = _make_panel(Vector2(18,12),Vector2(226,132),Color(0.045,0.035,0.075,0.94),Color("77628d"))
+	hint_panel.name = "PrologueControlsHint"
+	ui_layer.add_child(hint_panel)
+	text_at(hint_panel,"УПРАВЛЕНИЕ",Vector2(10,7),Vector2(206,20),12,Color("e4d2f2"))
+	controls_list_label = text_at(hint_panel,"WASD / стрелки  ·  ходить\nE  ·  действие\nTAB  ·  блокнот\nESC  ·  меню",Vector2(10,29),Vector2(206,61),11,Color("cdbfdf"))
+	controls_list_label.add_theme_constant_override("line_spacing", 2)
+	controls_list_label.modulate.a = 0.58
+	task_panel = _make_panel(Vector2(18,154),Vector2(226,106),Color(0.045,0.035,0.075,0.94),Color("77628d"))
+	task_panel.name = "CurrentTaskPanel"
+	ui_layer.add_child(task_panel)
+	text_at(task_panel,"ТЕКУЩАЯ ЗАДАЧА",Vector2(10,7),Vector2(206,19),11,Color("e4d2f2"))
+	hint_label = text_at(ui_layer,"",Vector2(150,484),Vector2(660,24),12,Color("d5c6f4"))
+	hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint_label.z_index = 80
+	hint_label.hide()
+	interaction_prompt = _build_interaction_prompt()
+	ui_layer.add_child(interaction_prompt)
+	chapter_title = text_at(ui_layer,"ТИПОЧЕК: КЛЮЧ · ПРОЛОГ",Vector2(22,520),Vector2(440,17),12,Color("d0c2de"))
+	chapter_title.z_index = 120
 	status_label = text_at(ui_layer,"",Vector2(620,17),Vector2(318,25),14,Color("bfaed6"))
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	goal_label = text_at(ui_layer,"",Vector2(110,478),Vector2(740,28),16,Color("ddc396"))
-	goal_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint_label = text_at(ui_layer,"",Vector2(50,512),Vector2(860,22),14,Color("cdbfdf"))
-	hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status_label.z_index = 120
+	notebook_hint_panel = _build_notebook_hint()
+	ui_layer.add_child(notebook_hint_panel)
+	goal_label = text_at(task_panel,"",Vector2(10,29),Vector2(206,68),12,Color("ddc396"))
+	goal_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	computer_panel = _make_panel(Vector2(100,68),Vector2(760,405),Color("171322"),Color("706180"))
 	ui_layer.add_child(computer_panel)
 	app_panel = _make_panel(Vector2(100,68),Vector2(760,405),Color("191524"),Color("8e78a7"))
 	ui_layer.add_child(app_panel)
 	inventory_panel = _make_panel(Vector2(200,120),Vector2(560,300),Color("191524"),Color("8e78a7"))
 	ui_layer.add_child(inventory_panel)
+	phone_panel = Panel.new()
+	phone_panel.name = "FriendsChatPhone"
+	phone_panel.position = Vector2(335,42)
+	phone_panel.size = Vector2(290,455)
+	phone_panel.z_index = 40
+	var phone_style := StyleBoxFlat.new()
+	phone_style.bg_color = Color("11131c")
+	phone_style.border_color = Color("88739a")
+	phone_style.set_border_width_all(3)
+	phone_style.set_corner_radius_all(22)
+	phone_panel.add_theme_stylebox_override("panel",phone_style)
+	ui_layer.add_child(phone_panel)
 	dialogue_panel = _make_panel(Vector2(100,310),Vector2(760,190),Color("100d1e"),Color("bba0cf"))
 	ui_layer.add_child(dialogue_panel)
 	dialogue_label = RichTextLabel.new()
@@ -187,8 +353,156 @@ func _build_ui() -> void:
 	choices_box.position = Vector2(22,139)
 	choices_box.size = Vector2(716,34)
 	dialogue_panel.add_child(choices_box)
-	for panel in [computer_panel,app_panel,inventory_panel,dialogue_panel]:
+	for panel in [computer_panel,app_panel,inventory_panel,phone_panel,dialogue_panel]:
 		panel.hide()
+	_build_polaroid_overlay()
+	_refresh_hud_visibility()
+
+func _build_polaroid_overlay() -> void:
+	polaroid_overlay = Control.new()
+	polaroid_overlay.name = "PolaroidEasterEggOverlay"
+	polaroid_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	polaroid_overlay.z_index = 130
+	polaroid_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	polaroid_overlay.hide()
+	polaroid_dim = ColorRect.new()
+	polaroid_dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	polaroid_dim.color = Color("080711")
+	polaroid_dim.modulate.a = 0.84
+	polaroid_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	polaroid_overlay.add_child(polaroid_dim)
+	polaroid_image = TextureRect.new()
+	polaroid_image.name = "PolaroidPhoto"
+	polaroid_image.texture = load("res://assets/sprites/furniture/poshalka.png") as Texture2D
+	polaroid_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	polaroid_image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+	polaroid_image.size = Vector2(432,324)
+	polaroid_image.position = Vector2(264,20)
+	polaroid_image.pivot_offset = polaroid_image.size * 0.5
+	polaroid_image.modulate.a = 0.0
+	polaroid_image.scale = Vector2(0.92,0.92)
+	polaroid_image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	polaroid_overlay.add_child(polaroid_image)
+	ui_layer.add_child(polaroid_overlay)
+
+func _show_polaroid_easter_egg() -> void:
+	var first_view: bool = not story.get_value("polaroid_easter_egg_seen")
+	story.set_value("polaroid_easter_egg_seen",true)
+	save_dirty = true
+	AudioManager.set_walking(false)
+	mode = "photo_reveal"
+	nearby_object = ""
+	interaction_prompt.hide()
+	for control in [hint_panel,task_panel,chapter_title,status_label,notebook_hint_panel]:
+		control.hide()
+	polaroid_overlay.show()
+	polaroid_dim.modulate.a = 0.0
+	polaroid_image.modulate.a = 0.0
+	polaroid_image.scale = Vector2(0.92,0.92)
+	var reveal := create_tween()
+	reveal.tween_property(polaroid_dim,"modulate:a",1.0,0.3)
+	reveal.tween_interval(0.18)
+	reveal.tween_property(polaroid_image,"modulate:a",1.0,0.38)
+	reveal.parallel().tween_property(polaroid_image,"scale",Vector2.ONE,0.38).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	await reveal.finished
+	await get_tree().create_timer(1.15).timeout
+	if not is_inside_tree() or mode != "photo_reveal":
+		return
+	var entries: Array
+	if first_view:
+		entries = [
+			{"speaker_id":"grat","speaker":"Грат","emotion":"surprised","text":"Как она вообще мне дала? У меня же ебануто воняет изо рта."},
+			{"speaker_id":"jbt","speaker":"ЖБТ","emotion":"happy","text":"Может, она просто задержала дыхание."},
+			{"speaker_id":"grat","speaker":"Грат","emotion":"embarrassed","text":"Вот это я понимаю — взаимность."}
+		]
+	else:
+		entries = [
+			{"speaker_id":"grat","speaker":"Грат","emotion":"neutral","text":"Снимок всё такой же. А запах, к счастью, внутрь не записался."}
+		]
+	flow = "polaroid_easter_egg"
+	mode = "dialogue"
+	vn.z_index = 140
+	_start_dialogue_entries(entries)
+
+func _build_notebook_hint() -> Panel:
+	var panel := _make_panel(Vector2(880,10),Vector2(64,64),Color(0.045,0.035,0.075,0.97),Color("8e75a5"))
+	panel.name = "NotebookTabHint"
+	var cover := ColorRect.new()
+	cover.position = Vector2(15,7)
+	cover.size = Vector2(34,29)
+	cover.color = Color("322640")
+	cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(cover)
+	var page_left := ColorRect.new()
+	page_left.position = Vector2(17,9)
+	page_left.size = Vector2(14,25)
+	page_left.color = Color("e4d6ed")
+	page_left.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(page_left)
+	var page_right := ColorRect.new()
+	page_right.position = Vector2(33,9)
+	page_right.size = Vector2(14,25)
+	page_right.color = Color("cbb8dc")
+	page_right.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(page_right)
+	var spine := ColorRect.new()
+	spine.position = Vector2(31,9)
+	spine.size = Vector2(2,25)
+	spine.color = Color("806b91")
+	spine.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(spine)
+	for x in [20.0, 36.0]:
+		for y in [15.0, 21.0, 27.0]:
+			var ruled_line := ColorRect.new()
+			ruled_line.position = Vector2(x, y)
+			ruled_line.size = Vector2(8,1)
+			ruled_line.color = Color("a996bd")
+			ruled_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			panel.add_child(ruled_line)
+	var tab := text_at(panel,"TAB",Vector2(6,41),Vector2(52,16),11,Color("f0e8ff"))
+	tab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	panel.z_index = 120
+	return panel
+
+func _build_interaction_prompt() -> Panel:
+	var panel := Panel.new()
+	panel.name = "PixelInteractionPrompt"
+	panel.size = Vector2(174,42)
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("17121f")
+	style.border_color = Color("d4b77b")
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(2)
+	style.shadow_color = Color(0.01,0.005,0.02,0.75)
+	style.shadow_size = 3
+	style.shadow_offset = Vector2(2,2)
+	panel.add_theme_stylebox_override("panel",style)
+	var keycap := Panel.new()
+	keycap.position = Vector2(6,7)
+	keycap.size = Vector2(27,27)
+	keycap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var key_style := StyleBoxFlat.new()
+	key_style.bg_color = Color("473750")
+	key_style.border_color = Color("a98eb9")
+	key_style.set_border_width_all(1)
+	key_style.set_corner_radius_all(1)
+	keycap.add_theme_stylebox_override("panel",key_style)
+	panel.add_child(keycap)
+	interaction_key_label = text_at(keycap,"E",Vector2.ZERO,Vector2(27,27),14,Color("f4dba7"))
+	interaction_key_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	interaction_key_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	interaction_key_label.add_theme_font_size_override("font_size",14)
+	interaction_key_label.add_theme_color_override("font_outline_color",Color("241b2d"))
+	interaction_key_label.add_theme_constant_override("outline_size",1)
+	interaction_action_label = text_at(panel,"ИСПОЛЬЗОВАТЬ",Vector2(39,5),Vector2(128,13),9,Color("d5bd8e"))
+	interaction_action_label.add_theme_font_size_override("font_size",9)
+	interaction_target_label = text_at(panel,"",Vector2(39,19),Vector2(128,17),11,Color("f0e8ff"))
+	interaction_target_label.add_theme_font_size_override("font_size",11)
+	interaction_target_label.clip_text = true
+	panel.z_index = 80
+	panel.hide()
+	return panel
 
 func _create_vn() -> void:
 	vn = preload("res://scripts/vn_dialogue.gd").new()
@@ -248,6 +562,31 @@ func _on_achievement_dialogue_choice(choice_id: String) -> void:
 				c5_flags = {"gpt_trust":true,"gpt_boundaries":true}
 			"c5_jbt_unsure": decision = "court_jbt_question"
 		if decision != "": story.decide(decision,choice_id,c5_effects,c5_flags)
+	if flow.begins_with("chapter_six"):
+		var c6_flags := {}
+		match choice_id:
+			"c6_contract":
+				c6_flags = {"artbay_contract_signed":true,"artbay_control_taken":false,"artbay_trust":true}
+				if bool(story.get_value("artbay_evidence")): c6_flags["project_ownership_proven"] = true
+			"c6_cut": c6_flags = {"artbay_control_taken":false,"artbay_contract_signed":false}
+			"c6_trust": c6_flags = {"artbay_control_taken":true,"artbay_contract_signed":false,"project_access_shared":true}
+		if not c6_flags.is_empty():
+			story.decide("chapter_six_resolution",choice_id,{"affection_artbay":1 if choice_id == "c6_contract" else 0},c6_flags)
+	if flow.begins_with("chapter_seven_outro"):
+		var ending_id := "neutral"
+		match choice_id:
+			"c7_grok": ending_id = "grok" if story.get_value("grok_date_completed") and story.get_value("grok_without_key") else "neutral"
+			"c7_jbt": ending_id = "jbt" if story.get_value("gpt_boundaries") else "neutral"
+			"c7_artrey": ending_id = "artbay" if story.get_value("artbay_contract_signed") and story.get_value("project_ownership_proven") else "neutral"
+			"c7_artrey_bad": ending_id = "artbay_bad" if story.get_value("artbay_control_taken") else "neutral"
+			"c7_team": ending_id = "team" if story.get_value("defused_tab_war") else "neutral"
+			"c7_instrument": ending_id = "instrumental" if int(story.get_value("lies_count",0)) >= 2 or (story.get_value("artbay_control_taken") and story.get_value("lied_in_court")) else "neutral"
+			"c7_ministry": ending_id = "ministry" if story.get_value("secret_protocol") and (story.get_value("stamp_obtained") or story.get_value("stamp_stolen")) else "neutral"
+			"c7_triple": ending_id = "triple" if story.get_value("defused_tab_war") and int(story.get_value("affection_grok",0)) >= 2 and int(story.get_value("affection_gpt",0)) >= 2 and int(story.get_value("affection_artbay",0)) >= 2 else "neutral"
+			"c7_solo": ending_id = "neutral"
+		story.set_value("final_ending",ending_id)
+		story.decide("final_choice",choice_id)
+		if choice_id == "c7_solo": story.set_value("honest_final_choice",true)
 	if choice_id != "":
 		AchievementManager.unlock_achievement("first_choice")
 		Early.on_choice(self, choice_id)
@@ -255,8 +594,22 @@ func _on_achievement_dialogue_choice(choice_id: String) -> void:
 
 func _on_story_line_changed(new_index: int) -> void:
 	dialogue_index = new_index
-	var event: String = str(vn.current_entry().get("story_event", ""))
+	if previous_dialogue_duration > 0:
+		_advance_narrative_clock(previous_dialogue_duration)
+	var entry: Dictionary = vn.current_entry()
+	entry["timestamp"] = _clock_text()
+	if new_index >= 0 and new_index < vn.entries.size():
+		vn.entries[new_index] = entry
+	previous_dialogue_duration = int(entry.get("duration_minutes", 1))
+	_update_clock_display()
+	var event: String = str(entry.get("story_event", ""))
 	if event == "document_84_opened": AchievementManager.report_story_event(event)
+	if event == "digital_archaeology":
+		start_digital_archaeology()
+		return
+	if event == "last_build":
+		start_last_build()
+		return
 	if event == "grok_personal_finished" and story.get_value("grok_without_key"):
 		AchievementManager.report_story_event("grok_personal_scene")
 	elif event == "bios_dinner_finished":
@@ -283,34 +636,108 @@ func clear_panel(panel: Panel) -> void:
 		child.queue_free()
 
 func _set_active_chapter(value: int) -> void:
-	active_chapter = clampi(value, 0, 5)
+	var next_chapter := clampi(value, 0, 7)
+	if next_chapter != active_chapter:
+		narrative_clock_minutes = CHAPTER_START_MINUTES[next_chapter]
+		narrative_day = CHAPTER_START_DAY[next_chapter]
+		previous_dialogue_duration = 0
+	active_chapter = next_chapter
 	refresh_goal()
 
+func _clock_text() -> String:
+	var minutes_of_day := posmod(narrative_clock_minutes, 24 * 60)
+	return "ДЕНЬ %d · %02d:%02d" % [narrative_day, int(minutes_of_day / 60), minutes_of_day % 60]
+
+func _time_of_day_text() -> String:
+	var minutes_of_day := posmod(narrative_clock_minutes, 24 * 60)
+	return "%02d:%02d" % [int(minutes_of_day / 60), minutes_of_day % 60]
+
+func _advance_narrative_clock(minutes: int) -> void:
+	narrative_clock_minutes += maxi(0, minutes)
+	while narrative_clock_minutes >= 24 * 60:
+		narrative_clock_minutes -= 24 * 60
+		narrative_day += 1
+
+func _update_clock_display() -> void:
+	if not is_instance_valid(status_label):
+		return
+	status_label.text = "%s / %s" % [_clock_text(), clock_location]
+	status_label.position = Vector2(560,17) if active_chapter > 0 else Vector2(620,17)
+	status_label.size = Vector2(306,25) if active_chapter > 0 else Vector2(318,25)
+	if is_instance_valid(vn):
+		vn.set_clock_text(_time_of_day_text())
+
+func _refresh_hud_visibility() -> void:
+	if not is_instance_valid(hint_panel):
+		return
+	var prologue_controls := active_chapter == 0
+	var show_task := not dialogue_open and not phone_hud_hidden
+	hint_panel.visible = prologue_controls and show_task
+	hint_label.visible = false
+	task_panel.position = Vector2(18,154) if prologue_controls else Vector2(18,12)
+	task_panel.visible = show_task
+	notebook_hint_panel.visible = active_chapter > 0 and not phone_hud_hidden
+	if dialogue_open or phone_hud_hidden or mode != "room":
+		interaction_prompt.hide()
+
+func _build_dialogue_timing(entries: Array) -> void:
+	for entry in entries:
+		if not entry is Dictionary:
+			continue
+		if not entry.has("duration_minutes"):
+			entry["duration_minutes"] = DIALOGUE_TIME.estimate_minutes(str(entry.get("text", "")))
+		entry.erase("timestamp")
+
 func refresh_goal() -> void:
-	chapter_title.text = "ГРАТ / ПРОЛОГ" if active_chapter == 0 else "ГРАТ / ГЛАВА %d" % active_chapter
+	chapter_title.text = "ТИПОЧЕК: КЛЮЧ · ПРОЛОГ" if active_chapter == 0 else "ТИПОЧЕК: КЛЮЧ · ГЛАВА %d" % active_chapter
+	clock_location = "консультаций: %d" % consultations if active_chapter == 0 else ""
 	if active_chapter == 3:
-		goal_label.text = "Глава 3 завершена · получена повестка в Министерство" if story.get_value("chapter_three_complete") else "Глава 3 · разговор с ЖБТ и война вкладок"
-		status_label.text = "03:47 / ЖБТ и Грок онлайн"
+		goal_label.text = "Глава 3 завершена · получена повестка в Министерство" if story.get_value("chapter_three_complete") else ("Глава 3 · подойди к компьютеру и открой переписку" if chapter_computer_pending == 3 else "Глава 3 · разговор с ЖБТ и война вкладок")
+		clock_location = "ЖБТ и Грок онлайн"
+		_update_clock_display()
+		_refresh_hud_visibility()
 		return
 	if active_chapter == 4:
-		goal_label.text = "Глава 4 завершена · повестка в суд" if story.get_value("chapter_four_complete") else "Глава 4 · разберись с очередью Министерства"
-		status_label.text = "03:47 / Министерство Ключевых Дел"
+		goal_label.text = "Глава 4 завершена · повестка в суд" if story.get_value("chapter_four_complete") else ("Глава 4 · подойди к компьютеру и открой повестку" if chapter_computer_pending == 4 else "Глава 4 · разберись с очередью Министерства")
+		clock_location = "Министерство"
+		_update_clock_display()
+		_refresh_hud_visibility()
 		return
 	if active_chapter == 5:
-		goal_label.text = "Глава 5 завершена · Артрей предлагает договор" if story.get_value("chapter_five_complete") else "Глава 5 · ответь на обвинения суда"
-		status_label.text = "03:47 / Судья-принтер"
+		goal_label.text = "Глава 5 завершена · Артрей предлагает договор" if story.get_value("chapter_five_complete") else ("Глава 5 · подойди к компьютеру и подготовь дело" if chapter_computer_pending == 5 else "Глава 5 · ответь на обвинения суда")
+		clock_location = "судья-принтер"
+		_update_clock_display()
+		_refresh_hud_visibility()
+		return
+	if active_chapter == 6:
+		goal_label.text = "Глава 6 завершена · проект восстановлен" if story.get_value("chapter_six_complete") else ("Глава 6 · подойди к компьютеру и открой архив" if chapter_computer_pending == 6 else "Глава 6 · проверь историю файлов")
+		clock_location = "архив проекта"
+		_update_clock_display()
+		_refresh_hud_visibility()
+		return
+	if active_chapter == 7:
+		goal_label.text = "Глава 7 · подойди к компьютеру и открой последнюю сборку" if chapter_computer_pending == 7 else "Глава 7 · последняя сборка и решение о релизе"
+		clock_location = "последняя сборка"
+		_update_clock_display()
+		_refresh_hud_visibility()
 		return
 	if active_chapter == 2:
-		goal_label.text = "Глава 2 завершена · key.txt получен" if chapter_two_complete else ("Глава 2 · Артрей ждёт ответа на телефоне" if story.get_value("grok_date_completed") else "Глава 2 · свидание в BIOS")
-		status_label.text = "03:47 / Артрей на связи" if story.get_value("grok_date_completed") else "03:47 / BIOS"
+		goal_label.text = "Глава 2 завершена · key.txt получен" if chapter_two_complete else ("Глава 2 · Артрей ждёт ответа на телефоне" if story.get_value("grok_date_completed") else ("Глава 2 · подойди к компьютеру и открой BIOS" if chapter_computer_pending == 2 else "Глава 2 · свидание в BIOS"))
+		clock_location = "Артрей на связи" if story.get_value("grok_date_completed") else "BIOS"
+		_update_clock_display()
+		_refresh_hud_visibility()
 		return
 	if active_chapter == 1:
 		goal_label.text = "Глава 1 · Доказательства: %d / 4 · кровать, постер, шкаф, пицца" % chapter_one_evidence.size() if chapter_one_stage < 2 else "Глава 1 завершена · следующее свидание — в BIOS"
-		status_label.text = "03:47 / Грок онлайн"
+		clock_location = "Грок онлайн"
+		_update_clock_display()
+		_refresh_hud_visibility()
 		return
 	var goals := ["Записать голосовое друзьям · телефон возле пиццы", "Подойти к компьютеру и запустить свою игру", "Открыть Blender и сделать ключ самому", "Попросить ЖБТ сделать модель ключа", "Вставить скрипт в поиск", "Сообщить ЖБТ, что код не работает", "Спросить ЖБТ, как написать Грок", "Открыть вкладку Grok", "Пролог завершён · продолжение следует"]
 	goal_label.text = goals[step]
-	status_label.text = "03:47 / консультаций: %d" % consultations
+	clock_location = "консультаций: %d" % consultations
+	_update_clock_display()
+	_refresh_hud_visibility()
 
 func show_menu() -> void:
 	AudioManager.set_walking(false)
@@ -328,6 +755,7 @@ func show_menu() -> void:
 	button_at(app_panel,"Начать" if not intro_seen else "Продолжить",Vector2(32,302),Vector2(212,46),resume_game)
 	if intro_seen:
 		button_at(app_panel,"С начала",Vector2(264,302),Vector2(180,46),confirm_restart)
+	button_at(app_panel,"Демо диалогов",Vector2(32,359),Vector2(212,40),start_vn_demo)
 	_show_hint("WASD / стрелки — ходить · E — действие · Tab — блокнот · Esc — меню")
 
 func start_vn_demo() -> void:
@@ -367,11 +795,19 @@ func resume_game() -> void:
 		start_office_queue()
 	elif minigame_checkpoint.get("kind", "") == "court_trial":
 		start_court_trial()
+	elif minigame_checkpoint.get("kind", "") == "digital_archaeology":
+		start_digital_archaeology()
+	elif minigame_checkpoint.get("kind", "") == "last_build":
+		start_last_build()
 	elif minigame_checkpoint.get("kind", "") == "blender":
 		Early.show_blender_game(self)
 	elif minigame_checkpoint.get("kind", "") == "brainstorm":
 		_set_active_chapter(2)
 		Early.show_brainstorm(self)
+	elif not call_event_pending.is_empty():
+		_start_call_event(call_event_pending, call_event_pending_chapter)
+	elif chapter_computer_pending in [3,4,5,6,7]:
+		refresh_goal()
 	elif not intro_seen:
 		begin_flow("intro")
 	elif active_chapter == 3:
@@ -383,6 +819,12 @@ func resume_game() -> void:
 	elif active_chapter == 5:
 		if story.get_value("chapter_five_complete"): show_chapter_five_ending()
 		else: start_chapter_five()
+	elif active_chapter == 6:
+		if story.get_value("chapter_six_complete"): show_chapter_six_ending()
+		else: start_chapter_six()
+	elif active_chapter == 7:
+		if story.get_value("chapter_seven_complete"): show_chapter_seven_ending()
+		else: start_chapter_seven()
 	elif active_chapter == 2:
 		if story.get_value("grok_date_completed"): show_chapter_two_ending()
 		else: start_chapter_two()
@@ -411,9 +853,11 @@ func _physics_process(_delta: float) -> void:
 		if player.velocity.length() > 1.0:
 			save_dirty = true
 		nearby_object = _get_nearby_object()
-		_show_hint("E — " + _object_name(nearby_object) if nearby_object != "" else "WASD / стрелки — ходить · Shift — бег · E — действие · Tab — блокнот")
+		_show_hint("")
+		_update_interaction_prompt(nearby_object)
 	else:
 		player.velocity=Vector2.ZERO
+		_update_interaction_prompt("")
 	AudioManager.set_walking(mode == "room" and not dialogue_open and player.velocity.length() > 1.0)
 	if motion != Vector2.ZERO:
 		facing=motion
@@ -439,13 +883,22 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed or event.echo:
 		return
 	var key: int = event.physical_keycode if event.physical_keycode != 0 else event.keycode
-	if mode in ["tab_war","office_404","court_trial"]: return
+	if mode in ["tab_war","office_404","court_trial","digital_archaeology","last_build"]: return
+	if mode == "credits":
+		if key == KEY_ESCAPE:
+			show_chapter_seven_ending()
+		elif key in [KEY_ENTER,KEY_KP_ENTER,KEY_SPACE]:
+			_finish_credits_roll()
+		get_viewport().set_input_as_handled()
+		return
 	if dialogue_open:
 		if vn != null and vn.handle_key(key):
 			get_viewport().set_input_as_handled()
 		return
 	if key==KEY_ESCAPE:
-		if mode=="room":
+		if mode == "credits":
+			show_chapter_seven_ending()
+		elif mode=="room":
 			pause_menu.open_pause()
 		elif mode=="desktop" or mode=="menu" or mode=="ending":
 			_close_computer()
@@ -461,7 +914,48 @@ func _unhandled_input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 func _object_name(id: String) -> String:
-	return {"computer":"компьютер", "phone":"телефон", "bed":"кровать", "poster":"постер", "pizza":"пицца", "wardrobe":"шкаф", "plant":"растение", "drafts":"черновики", "books":"книги"}.get(id,id)
+	return {"computer":"компьютер", "phone":"телефон", "bed":"кровать", "poster":"постер", "pizza":"пицца", "wardrobe":"шкаф", "plant":"растение", "drafts":"черновики", "polaroid":"снимок"}.get(id,id)
+
+func _interaction_prompt_offset(id: String) -> Vector2:
+	# Anchors are above the visible sprite, while interaction distance still uses
+	# the object's physical footprint.
+	return {
+		"computer": Vector2(0,-77),
+		"phone": Vector2(0,-34),
+		"pizza": Vector2(0,-40),
+		"bed": Vector2(0,-125),
+		"wardrobe": Vector2(0,-111),
+		"poster": Vector2(0,-86),
+		"plant": Vector2(0,-36),
+		"drafts": Vector2(0,-25),
+		"polaroid": Vector2(0,-32)
+	}.get(id, Vector2(0,-48))
+
+func _update_interaction_prompt(object_id: String) -> void:
+	if not is_instance_valid(interaction_prompt):
+		return
+	# The polaroid is an intentional secret: E still works, but there's no marker.
+	if object_id.is_empty() or object_id == "polaroid" or mode != "room" or dialogue_open or phone_hud_hidden:
+		interaction_prompt.hide()
+		return
+	var target: Node2D
+	for candidate in get_tree().get_nodes_in_group("interactable"):
+		if is_ancestor_of(candidate) and str(candidate.get_meta("object_id", "")) == object_id:
+			target = candidate as Node2D
+			break
+	if not is_instance_valid(target):
+		interaction_prompt.hide()
+		return
+	interaction_target_label.text = _object_name(object_id).to_upper()
+	var world_anchor := target.global_position + _interaction_prompt_offset(object_id)
+	var screen_anchor := get_viewport().get_canvas_transform() * world_anchor
+	var viewport_size := get_viewport().get_visible_rect().size
+	var prompt_size := interaction_prompt.size
+	var prompt_position := screen_anchor - Vector2(prompt_size.x * 0.5, prompt_size.y + 8.0)
+	prompt_position.x = clampf(prompt_position.x, 6.0, viewport_size.x - prompt_size.x - 6.0)
+	prompt_position.y = clampf(prompt_position.y, 6.0, viewport_size.y - prompt_size.y - 6.0)
+	interaction_prompt.position = Vector2(roundf(prompt_position.x), roundf(prompt_position.y))
+	interaction_prompt.show()
 
 func _get_nearby_object() -> String:
 	# Use the closest point on the physical footprint, not a tall sprite's
@@ -500,6 +994,8 @@ func _interact() -> void:
 	if nearby_object=="computer":
 		AudioManager.play_pc_sfx()
 		show_desktop()
+		if chapter_computer_pending == active_chapter and active_chapter in [3,4,5,6,7]:
+			_show_chapter_launch_action()
 	elif nearby_object=="phone":
 		if story.get_value("grok_date_completed") and not chapter_two_complete:
 			if minigame_checkpoint.get("kind", "") == "brainstorm": Early.show_brainstorm(self)
@@ -507,7 +1003,9 @@ func _interact() -> void:
 		elif step==Step.VOICE:
 			begin_flow("voice")
 		else:
-			optional(["[b]ТЕЛЕФОН[/b]\nГолосовое: «Авторский проект. Всё сам».\nПрослушано: 2. Ответов: 0."])
+			show_friends_chat()
+	elif nearby_object=="polaroid":
+		_show_polaroid_easter_egg()
 	elif nearby_object!="":
 		if not examined.has(nearby_object):
 			examined.append(nearby_object)
@@ -552,23 +1050,79 @@ func _start_dialogue_entries(entries_to_play: Array, start_index: int = 0) -> vo
 		_set_active_chapter(4)
 	elif flow.begins_with("chapter_five"):
 		_set_active_chapter(5)
+	elif flow.begins_with("chapter_six"):
+		_set_active_chapter(6)
+	elif flow.begins_with("chapter_seven"):
+		_set_active_chapter(7)
 	elif flow.begins_with("chapter_two") or flow == "artrey_plan_done":
 		_set_active_chapter(2)
 	elif flow.begins_with("chapter_one"):
 		_set_active_chapter(1)
 	AudioManager.set_walking(false)
 	AudioManager.play_music("dialogue")
+	var dialogue_entries: Array = entries_to_play.duplicate(true)
+	for entry_index in range(dialogue_entries.size()):
+		var entry: Variant = dialogue_entries[entry_index]
+		if entry is Dictionary:
+			entry["text"] = _compact_dialogue_text(str(entry.get("text", "")))
+			dialogue_entries[entry_index] = entry
+	_build_dialogue_timing(dialogue_entries)
+	previous_dialogue_duration = 0
 	current_lines = []
-	for item in entries_to_play:
+	for item in dialogue_entries:
 		if item is Dictionary:
+			if str(item.get("speaker", "")).begins_with("Артрей"):
+				item["speaker_id"] = "artrey"
 			current_lines.append(str(item.get("text", "")))
-	vn_entries = entries_to_play
+	vn_entries = dialogue_entries
 	dialogue_index = start_index
 	dialogue_open = true
 	dialogue_panel.hide()
-	vn.start(entries_to_play, start_index)
+	phone_panel.hide()
+	task_panel.hide()
+	interaction_prompt.hide()
+	_refresh_hud_visibility()
+	var use_phone_chat := _is_artrey_phone_conversation(dialogue_entries)
+	var is_call := flow.begins_with("phone_call_")
+	_set_phone_chat_hud(use_phone_chat or is_call)
+	if is_call:
+		vn.set_phone_call_mode(_call_caller_name(flow), flow.ends_with("call_drx"))
+		if start_index == 0:
+			var call_event_id := flow.trim_prefix("phone_call_").trim_prefix("dev_")
+			AudioManager.play_call_sfx(call_event_id)
+	else:
+		vn.set_phone_call_mode("", false)
+		vn.set_phone_chat_mode(use_phone_chat)
+	vn.start(dialogue_entries, start_index)
 	_show_hint("E / Enter — показать реплику · ещё раз — продолжить")
 	hint_label.hide()
+
+func _compact_dialogue_text(value: String) -> String:
+	var compact := value.replace("\r\n", "\n")
+	while compact.contains("\n\n"):
+		compact = compact.replace("\n\n", "\n")
+	return compact
+
+func _is_artrey_phone_conversation(entries: Array) -> bool:
+	var has_artrey := false
+	for item in entries:
+		if not item is Dictionary:
+			continue
+		var speaker_id := str(item.get("speaker_id", ""))
+		var speaker_name := str(item.get("speaker", ""))
+		if speaker_id == "artrey" or speaker_name.begins_with("Артрей"):
+			has_artrey = true
+		if speaker_id in ["grok", "jbt"] or speaker_name.begins_with("Грок") or speaker_name.begins_with("ЖБТ"):
+			return false
+	return has_artrey
+
+func _call_caller_name(call_flow: String) -> String:
+	var event_id := call_flow.trim_prefix("phone_call_").trim_prefix("dev_")
+	match event_id:
+		"call_drx": return "workersgoincrazy@outlook.com"
+		"call_tables": return "mlff"
+		"call_palych": return "Палыч"
+	return "Неизвестный номер"
 
 func _entries_from_lines(lines: Array[String]) -> Array:
 	var result: Array = []
@@ -610,7 +1164,7 @@ func _entries_from_lines(lines: Array[String]) -> Array:
 				portraits["left"] = {"speaker_id":"grat", "emotion":"neutral"}
 			elif speaker_id == "grat" and ("ЖБТ" in upper or "→" in upper):
 				portraits["right"] = {"speaker_id":"jbt", "emotion":"neutral"}
-		result.append({"speaker_id":speaker_id, "speaker":speaker_name, "emotion":emotion, "side":side, "text":body.replace("\n\n", "\n"), "portraits":portraits})
+		result.append({"speaker_id":speaker_id, "speaker":speaker_name, "emotion":emotion, "side":side, "text":body, "portraits":portraits})
 	return result
 
 func _display_current_line() -> void:
@@ -618,7 +1172,7 @@ func _display_current_line() -> void:
 	if dialogue_index>=current_lines.size():
 		_close_dialogue()
 		return
-	dialogue_label.text=current_lines[dialogue_index]
+	dialogue_label.text=_compact_dialogue_text(current_lines[dialogue_index])
 	var b := Button.new()
 	b.text="Продолжить  ·  E / Enter    %d / %d" % [dialogue_index+1,current_lines.size()]
 	b.focus_mode=Control.FOCUS_NONE
@@ -641,8 +1195,38 @@ func _close_dialogue() -> void:
 	dialogue_panel.hide()
 	if vn != null:
 		vn.close()
+	if phone_hud_hidden:
+		_set_phone_chat_hud(false)
+		refresh_goal()
+	elif not task_panel.visible:
+		task_panel.show()
+		refresh_goal()
+	if previous_dialogue_duration > 0:
+		_advance_narrative_clock(previous_dialogue_duration)
+		previous_dialogue_duration = 0
+		_update_clock_display()
+	_refresh_hud_visibility()
 	var completed_flow := flow
+	if completed_flow.begins_with("phone_call_dev_"):
+		_finish_dev_call_event()
+		return
+	if completed_flow == "polaroid_easter_egg":
+		flow = ""
+		mode = "room"
+		vn.z_index = 100
+		polaroid_overlay.hide()
+		AudioManager.play_music("room")
+		AchievementManager.unlock_achievement("polaroid_secret")
+		refresh_goal()
+		save_progress()
+		return
+	if completed_flow.begins_with("phone_call_"):
+		_finish_call_event(completed_flow.trim_prefix("phone_call_"))
+		return
 	flow=""
+	if completed_flow == "chapter_computer_boot":
+		_start_chapter_opening_dialogue(active_chapter)
+		return
 	if completed_flow == "chapter_three_intro":
 		start_tab_war()
 		return
@@ -669,6 +1253,24 @@ func _close_dialogue() -> void:
 		refresh_goal()
 		save_progress()
 		show_chapter_five_ending()
+		return
+	if completed_flow == "chapter_six_outro":
+		story.set_value("chapter_six_complete",true)
+		refresh_goal()
+		save_progress()
+		show_chapter_six_ending()
+		return
+	if completed_flow == "chapter_seven_outro":
+		story.set_value("chapter_seven_complete",true)
+		refresh_goal()
+		save_progress()
+		show_chapter_seven_ending()
+		return
+	if completed_flow == "voice":
+		step = Step.PROJECT
+		save_progress()
+		refresh_goal()
+		show_friends_chat()
 		return
 	if completed_flow == "chapter_two":
 		story.set_value("grok_date_completed", true)
@@ -758,6 +1360,7 @@ func _close_dialogue() -> void:
 		computer_open=false
 
 func _close_computer() -> void:
+	_clear_credits_screen()
 	for panel in [app_panel,computer_panel,inventory_panel]:
 		panel.hide()
 	computer_open=false
@@ -808,6 +1411,45 @@ func show_desktop() -> void:
 	text_at(computer_panel,"СЕЙЧАС: "+goal_label.text,Vector2(106,355),Vector2(544,40),13,Color("d7c6b1"))
 	text_at(computer_panel,"03:47",Vector2(682,360),Vector2(65,25),17)
 	_show_hint("Мышь — выбрать приложение · Esc — выйти из компьютера")
+
+func _show_chapter_launch_action() -> void:
+	var labels := {
+		3: ["ПЕРЕПИСКА И ВКЛАДКИ", "Открыть переписку главы 3 →"],
+		4: ["ПОВЕСТКА МИНИСТЕРСТВА", "Открыть материалы дела →"],
+		5: ["МАТЕРИАЛЫ СУДА", "Подготовить дело к слушанию →"],
+		6: ["ИСТОРИЯ ПРОЕКТА", "Открыть архив проекта →"],
+		7: ["ПОСЛЕДНЯЯ СБОРКА", "Открыть рабочую сборку →"]
+	}
+	var label_pair: Array = labels.get(chapter_computer_pending, ["ПРОДОЛЖИТЬ ГЛАВУ", "Открыть материалы →"])
+	var card := _make_panel(Vector2(215,111),Vector2(440,158),Color(0.055,0.045,0.09,0.96),Color("b99acb"))
+	card.name = "ChapterLaunchCard"
+	computer_panel.add_child(card)
+	text_at(card,str(label_pair[0]),Vector2(20,22),Vector2(400,28),19,Color("e9d7b3"))
+	text_at(card,"Грат проверит проект и подготовит всё к следующему разговору.",Vector2(20,62),Vector2(400,40),13,Color("d5c6df"))
+	button_at(card,str(label_pair[1]),Vector2(20,108),Vector2(400,38),_launch_pending_chapter)
+
+func _launch_pending_chapter() -> void:
+	var chapter := chapter_computer_pending
+	if chapter not in [3,4,5,6,7]:
+		return
+	chapter_computer_pending = 0
+	computer_open = false
+	var boot_text := {
+		3: "Грат открывает рабочий проект, проверяет сохранение и сворачивает лишние вкладки. На этот раз сначала поговорит с людьми, потом разберётся с окнами.",
+		4: "Грат находит повестку, сверяет номер талона и открывает список документов. В Министерство он пойдёт хотя бы с понятным планом.",
+		5: "Грат раскладывает на рабочем столе переписки и документы по делу. Теперь надо объяснить, зачем он просил помощи и кому принадлежит проект.",
+		6: "Грат делает отдельную копию проекта и открывает историю файлов. В этот раз он проверит, кто и когда менял материалы.",
+		7: "Грат открывает сохранённый проект, проверяет файлы и запускает последнюю сборку. Перед релизом нужно убедиться, что дверь наконец работает."
+	}
+	play_chapter_scene("chapter_computer_boot", [DIALOGUE_TIME.line("narrator","neutral",str(boot_text[chapter]))])
+
+func _start_chapter_opening_dialogue(chapter: int) -> void:
+	match chapter:
+		3: play_chapter_scene("chapter_three_intro", preload("res://scripts/chapter_three.gd").opening())
+		4: play_chapter_scene("chapter_four_intro", preload("res://scripts/chapter_four.gd").opening(story.values))
+		5: play_chapter_scene("chapter_five_intro", preload("res://scripts/chapter_five.gd").opening(story.values))
+		6: play_chapter_scene("chapter_six_intro", preload("res://scripts/chapter_six.gd").opening(story.values))
+		7: play_chapter_scene("chapter_seven_intro", preload("res://scripts/chapter_seven.gd").opening(story.values))
 
 func desktop_shortcut(title: String, id: String, index: int, pos: Vector2) -> void:
 	var shortcut := Button.new()
@@ -892,10 +1534,105 @@ func app_header(title: String) -> void:
 	button_at(app_panel,"Назад",Vector2(620,18),Vector2(112,36),go_back)
 
 func go_back() -> void:
-	if mode=="notebook" and notebook_from_room:
+	if mode == "friends_chat":
+		_close_friends_chat()
+	elif mode=="notebook" and notebook_from_room:
 		_close_computer()
 	else:
 		show_desktop()
+
+func show_friends_chat() -> void:
+	AudioManager.set_walking(false)
+	AudioManager.play_music("room")
+	computer_panel.hide()
+	app_panel.hide()
+	inventory_panel.hide()
+	dialogue_panel.hide()
+	phone_panel.show()
+	clear_panel(phone_panel)
+	_set_phone_chat_hud(true)
+	phone_panel.clip_contents = true
+	mode = "friends_chat"
+	computer_open = false
+	var notch := Panel.new()
+	notch.position = Vector2(112,7)
+	notch.size = Vector2(66,7)
+	var notch_style := StyleBoxFlat.new()
+	notch_style.bg_color = Color("3b3945")
+	notch_style.set_corner_radius_all(4)
+	notch.add_theme_stylebox_override("panel",notch_style)
+	phone_panel.add_child(notch)
+	text_at(phone_panel,_time_of_day_text(),Vector2(18,22),Vector2(60,18),12,Color("c9c3d1"))
+	text_at(phone_panel,"● ● ●  ▰",Vector2(204,22),Vector2(70,18),11,Color("c9c3d1"))
+	var header := Panel.new()
+	header.position = Vector2(8,45)
+	header.size = Vector2(274,56)
+	var header_style := StyleBoxFlat.new()
+	header_style.bg_color = Color("292437")
+	header_style.set_corner_radius_all(8)
+	header.add_theme_stylebox_override("panel",header_style)
+	phone_panel.add_child(header)
+	text_at(header,"‹",Vector2(12,12),Vector2(22,30),27,Color("d8c8ed"))
+	text_at(header,"ДРУЗЬЯ",Vector2(43,8),Vector2(170,22),16)
+	text_at(header,"Артрей · в сети",Vector2(44,30),Vector2(170,18),11,Color("9bc8a9"))
+	text_at(phone_panel,"Сегодня",Vector2(106,108),Vector2(80,18),11,Color("aaa3b1"))
+	_add_friends_chat_bubble("Грат · голосовое", "▶  0:07\n«Короче, делаю игру. Авторский проект. Всё сам»", Vector2(54,135), Vector2(222,88), true)
+	_add_friends_chat_bubble("Артрей", "Ну что, творческий директор, когда покажешь не обещания, а что-нибудь рабочее?", Vector2(14,232), Vector2(262,108), false)
+	text_at(phone_panel,"Прочитано · 03:48",Vector2(143,342),Vector2(128,17),10,Color("aaa3b1"))
+	var message_bar := Panel.new()
+	message_bar.position = Vector2(10,365)
+	message_bar.size = Vector2(270,38)
+	var bar_style := StyleBoxFlat.new()
+	bar_style.bg_color = Color("24212e")
+	bar_style.set_corner_radius_all(14)
+	message_bar.add_theme_stylebox_override("panel",bar_style)
+	phone_panel.add_child(message_bar)
+	text_at(message_bar,"Ответить позже…",Vector2(13,9),Vector2(190,22),12,Color("a9a3b0"))
+	text_at(message_bar,"＋",Vector2(235,5),Vector2(25,27),20,Color("cdbbdf"))
+	button_at(phone_panel,"Закрыть чат · к проекту",Vector2(14,410),Vector2(262,34),_close_friends_chat)
+	_show_hint("E — открыть телефон · Esc — закрыть чат")
+
+func _add_friends_chat_bubble(sender: String, message: String, pos: Vector2, area: Vector2, outgoing: bool) -> void:
+	var bubble := Panel.new()
+	bubble.position = pos
+	bubble.size = area
+	bubble.clip_contents = true
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("51416d") if outgoing else Color("282633")
+	style.set_corner_radius_all(10)
+	bubble.add_theme_stylebox_override("panel",style)
+	phone_panel.add_child(bubble)
+	text_at(bubble,sender,Vector2(10,6),Vector2(area.x-20,17),10,Color("cfb9e9") if outgoing else Color("c8c2d0"))
+	var body := RichTextLabel.new()
+	body.position = Vector2(10,24)
+	body.size = Vector2(area.x-20,area.y-28)
+	body.text = message
+	body.bbcode_enabled = false
+	body.fit_content = false
+	body.scroll_active = false
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_theme_font_size_override("normal_font_size",11)
+	body.add_theme_color_override("default_color",Color("f0eaf7"))
+	body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bubble.add_child(body)
+
+func _close_friends_chat() -> void:
+	phone_panel.hide()
+	mode = "room"
+	computer_open = false
+	player.velocity = Vector2.ZERO
+	AudioManager.play_music("room")
+	_set_phone_chat_hud(false)
+	refresh_goal()
+	if step == Step.PROJECT:
+		_show_hint("Сообщение отправлено · теперь запусти игру на компьютере")
+
+func _set_phone_chat_hud(hidden: bool) -> void:
+	phone_hud_hidden = hidden
+	for control in [chapter_title, status_label, task_panel, hint_panel, notebook_hint_panel, interaction_prompt]:
+		if is_instance_valid(control):
+			control.visible = not hidden
+	_refresh_hud_visibility()
 
 func show_info(title: String, body: String, caption: String) -> void:
 	app_header(title)
@@ -1018,21 +1755,40 @@ func show_chapter_one_checkpoint() -> void:
 	if chapter_one_stage == 2:
 		body = "Грок согласилась сделать ключ. Условие: свидание в BIOS.\n\nГЛАВА 1 ЗАВЕРШЕНА\nПродолжение — во второй главе."
 	text_at(app_panel,body,Vector2(30,161),Vector2(690,145),20)
-	button_at(app_panel,"В комнату",Vector2(30,324),Vector2(220,42),_close_computer)
+	var actions: Array = [{"text":"В комнату","callback":_close_computer}]
 	if chapter_one_stage == 2:
-		button_at(app_panel,"Глава 2 →",Vector2(285,324),Vector2(220,42),start_chapter_two)
+		actions.append({"text":"Глава 2 →","callback":start_chapter_two})
 	if chapter_one_stage == 2 and chapter_two_complete:
-		button_at(app_panel,"Повторить главу 2",Vector2(285,370),Vector2(260,32),start_chapter_two)
+		actions.append({"text":"Повторить главу 2","callback":start_chapter_two})
+	_add_ending_actions(actions)
 
 func start_chapter_three() -> void:
 	if minigame_checkpoint.get("kind", "") == "tab_war":
 		start_tab_war()
 		return
-	_set_active_chapter(3)
-	play_chapter_scene("chapter_three_intro", preload("res://scripts/chapter_three.gd").opening())
+	if _maybe_start_call_event(3): return
+	_prepare_chapter_computer_start(3)
+
+func _prepare_chapter_computer_start(chapter: int) -> void:
+	_set_active_chapter(chapter)
+	chapter_computer_pending = chapter
+	flow = ""
+	dialogue_open = false
+	computer_open = false
+	mode = "room"
+	player.velocity = Vector2.ZERO
+	player.position = SPAWN_POSITION
+	if is_instance_valid(vn): vn.close()
+	for panel in [app_panel, computer_panel, inventory_panel, dialogue_panel]: panel.hide()
+	AudioManager.set_walking(false)
+	AudioManager.stop_pc_sfx()
+	AudioManager.play_music("room")
+	refresh_goal()
+	save_progress()
 
 func start_tab_war() -> void:
 	_set_active_chapter(3)
+	chapter_computer_pending = 0
 	dialogue_open = false
 	flow = ""
 	vn.close()
@@ -1040,7 +1796,7 @@ func start_tab_war() -> void:
 	hint_label.hide()
 	AudioManager.set_walking(false)
 	AudioManager.stop_pc_sfx()
-	AudioManager.play_music("dialogue")
+	AudioManager.play_music("tab_war")
 	mode = "tab_war"
 	if not is_instance_valid(tab_war):
 		tab_war = preload("res://scripts/tab_war.gd").new()
@@ -1076,10 +1832,12 @@ func show_chapter_three_ending() -> void:
 	AudioManager.play_music("room")
 	text_at(app_panel,"ЖБТ наносит ответный удар",Vector2(30,90),Vector2(690,60),28)
 	text_at(app_panel,"Война вкладок завершена.\nПришла повестка в Министерство Ключевых Дел.\n\nПродолжение — в главе 4.",Vector2(30,170),Vector2(690,140),20)
-	button_at(app_panel,"В комнату",Vector2(30,316),Vector2(335,36),_close_computer)
-	button_at(app_panel,"Повторить главу 3",Vector2(395,316),Vector2(335,36),start_chapter_three)
-	button_at(app_panel,"Война вкладок →",Vector2(30,362),Vector2(335,36),start_tab_war)
-	button_at(app_panel,"Глава 4 →",Vector2(395,362),Vector2(335,36),start_chapter_four)
+	_add_ending_actions([
+		{"text":"В комнату","callback":_close_computer},
+		{"text":"Повторить главу 3","callback":start_chapter_three},
+		{"text":"Война вкладок","callback":start_tab_war},
+		{"text":"Глава 4 →","callback":start_chapter_four}
+	])
 
 func start_chapter_four() -> void:
 	_set_active_chapter(4)
@@ -1089,10 +1847,12 @@ func start_chapter_four() -> void:
 	if story.get_value("chapter_four_complete"):
 		show_chapter_four_ending()
 		return
-	play_chapter_scene("chapter_four_intro",preload("res://scripts/chapter_four.gd").opening(story.values))
+	if _maybe_start_call_event(4): return
+	_prepare_chapter_computer_start(4)
 
 func start_office_queue() -> void:
 	_set_active_chapter(4)
+	chapter_computer_pending = 0
 	dialogue_open = false
 	flow = ""
 	vn.close()
@@ -1100,7 +1860,7 @@ func start_office_queue() -> void:
 	hint_label.hide()
 	AudioManager.set_walking(false)
 	AudioManager.stop_pc_sfx()
-	AudioManager.play_music("dialogue")
+	AudioManager.play_music("queue_and_trial")
 	mode = "office_404"
 	if not is_instance_valid(office_queue):
 		office_queue = preload("res://scripts/office_queue.gd").new()
@@ -1140,11 +1900,13 @@ func show_chapter_four_ending() -> void:
 	var result := "Печать получена законно." if story.get_value("stamp_obtained") else ("Печать украдена; суд это заметит." if story.get_value("stamp_stolen") else "Министерство выдало отказ, но очередь пережита.")
 	if story.get_value("secret_protocol"): result += "\nНайден Протокол 0 — доступна скрытая улика."
 	text_at(app_panel,result + "\nСледом — суд.",Vector2(30,160),Vector2(690,120),20)
-	button_at(app_panel,"В комнату",Vector2(30,324),Vector2(220,42),_close_computer)
-	button_at(app_panel,"Переиграть главу 4",Vector2(270,324),Vector2(220,42),func():
-		minigame_checkpoint.clear()
-		play_chapter_scene("chapter_four_intro",preload("res://scripts/chapter_four.gd").opening(story.values)))
-	button_at(app_panel,"Глава 5 → Суд",Vector2(510,324),Vector2(220,42),start_chapter_five)
+	_add_ending_actions([
+		{"text":"В комнату","callback":_close_computer},
+		{"text":"Переиграть главу 4","callback":func():
+			minigame_checkpoint.clear()
+			_prepare_chapter_computer_start(4)},
+		{"text":"Глава 5 → Суд","callback":start_chapter_five}
+	])
 
 func start_chapter_five() -> void:
 	_set_active_chapter(5)
@@ -1154,10 +1916,12 @@ func start_chapter_five() -> void:
 	if story.get_value("chapter_five_complete"):
 		show_chapter_five_ending()
 		return
-	play_chapter_scene("chapter_five_intro",preload("res://scripts/chapter_five.gd").opening(story.values))
+	if _maybe_start_call_event(5): return
+	_prepare_chapter_computer_start(5)
 
 func start_court_trial() -> void:
 	_set_active_chapter(5)
+	chapter_computer_pending = 0
 	dialogue_open = false
 	flow = ""
 	vn.close()
@@ -1165,7 +1929,7 @@ func start_court_trial() -> void:
 	hint_label.hide()
 	AudioManager.set_walking(false)
 	AudioManager.stop_pc_sfx()
-	AudioManager.play_music("dialogue")
+	AudioManager.play_music("queue_and_trial")
 	mode = "court_trial"
 	if not is_instance_valid(court_trial):
 		court_trial = preload("res://scripts/court_trial.gd").new()
@@ -1199,10 +1963,219 @@ func show_chapter_five_ending() -> void:
 	var summary := "Улики приняты: %d / 3." % int(story.get_value("court_evidence_quality",0))
 	if story.get_value("lied_in_court"): summary += "\nСуд зафиксировал ложь."
 	text_at(app_panel,summary + "\nАртрей ждёт разговора о договоре.",Vector2(30,160),Vector2(690,120),20)
-	button_at(app_panel,"В комнату",Vector2(30,324),Vector2(220,42),_close_computer)
-	button_at(app_panel,"Переиграть суд",Vector2(280,324),Vector2(250,42),func():
-		minigame_checkpoint.clear()
-		play_chapter_scene("chapter_five_intro",preload("res://scripts/chapter_five.gd").opening(story.values)))
+	_add_ending_actions([
+		{"text":"В комнату","callback":_close_computer},
+		{"text":"Переиграть суд","callback":func():
+			minigame_checkpoint.clear()
+			_prepare_chapter_computer_start(5)},
+		{"text":"Глава 6 → Архив","callback":start_chapter_six}
+	])
+
+func start_chapter_six() -> void:
+	_set_active_chapter(6)
+	if minigame_checkpoint.get("kind","") == "digital_archaeology":
+		start_digital_archaeology()
+		return
+	if story.get_value("chapter_six_complete"):
+		show_chapter_six_ending()
+		return
+	if _maybe_start_call_event(6): return
+	_prepare_chapter_computer_start(6)
+
+func start_digital_archaeology() -> void:
+	_set_active_chapter(6)
+	chapter_computer_pending = 0
+	dialogue_open = false
+	flow = ""
+	vn.close()
+	for panel in [app_panel,computer_panel,inventory_panel,dialogue_panel]: panel.hide()
+	hint_label.hide()
+	AudioManager.set_walking(false)
+	AudioManager.stop_pc_sfx()
+	AudioManager.play_music("file_investigation")
+	mode = "digital_archaeology"
+	if not is_instance_valid(digital_archaeology):
+		digital_archaeology = preload("res://scripts/digital_archaeology.gd").new()
+		digital_archaeology.name = "DigitalArchaeology"
+		digital_archaeology.z_index = 150
+		ui_layer.add_child(digital_archaeology)
+		digital_archaeology.checkpoint_changed.connect(_save_digital_archaeology)
+		digital_archaeology.finished.connect(_finish_digital_archaeology)
+		digital_archaeology.pause_requested.connect(func(): pause_menu.open_pause())
+	var raw: Variant = minigame_checkpoint.get("state",{})
+	digital_archaeology.open(raw if raw is Dictionary else {})
+
+func _save_digital_archaeology(snapshot: Dictionary) -> void:
+	minigame_checkpoint = {"kind":"digital_archaeology","state":snapshot}
+	save_progress()
+
+func _finish_digital_archaeology(result: Dictionary) -> void:
+	minigame_checkpoint.clear()
+	if is_instance_valid(digital_archaeology): digital_archaeology.hide()
+	var has_proof := int(result.get("links",0)) >= 3
+	story.set_value("artbay_evidence",has_proof)
+	if has_proof: story.set_value("project_ownership_proven",true)
+	if int(result.get("found",0)) > 0: AchievementManager.report_story_event("artbay_suspicion")
+	if has_proof: AchievementManager.report_story_event("digital_detective")
+	AchievementManager.report_story_event("artbay_reveal")
+	play_chapter_scene("chapter_six_outro",preload("res://scripts/chapter_six.gd").after_archaeology(result,story.values))
+
+func show_chapter_six_ending() -> void:
+	_set_active_chapter(6)
+	app_header("ГЛАВА 6 ЗАВЕРШЕНА")
+	mode = "ending"
+	AudioManager.play_music("room")
+	text_at(app_panel,"Друг, который всё устроил",Vector2(30,90),Vector2(690,55),28)
+	var summary := "Граф доказательств собран: авторство подтверждено." if story.get_value("artbay_evidence") else "Рабочую копию удалось восстановить, но доказательств для договора не хватило."
+	if story.get_value("artbay_control_taken"): summary += "\nАртрей получил контроль над публикацией."
+	elif story.get_value("artbay_contract_signed"): summary += "\nПодписан договор с прозрачными ролями и титрами."
+	else: summary += "\nРешение о публикации остаётся за Гратом."
+	text_at(app_panel,summary + "\n\nНаступил вечер последней сборки.",Vector2(30,160),Vector2(690,120),19)
+	_add_ending_actions([
+		{"text":"В комнату","callback":_close_computer},
+		{"text":"Переиграть","callback":func():
+			minigame_checkpoint.clear()
+			_prepare_chapter_computer_start(6)},
+		{"text":"Глава 7 →","callback":start_chapter_seven}
+	])
+
+func start_chapter_seven() -> void:
+	_set_active_chapter(7)
+	if minigame_checkpoint.get("kind","") == "last_build":
+		start_last_build()
+		return
+	if story.get_value("chapter_seven_complete"):
+		show_chapter_seven_ending()
+		return
+	if _maybe_start_call_event(7): return
+	_prepare_chapter_computer_start(7)
+
+func start_last_build() -> void:
+	_set_active_chapter(7)
+	chapter_computer_pending = 0
+	dialogue_open = false
+	flow = ""
+	vn.close()
+	for panel in [app_panel,computer_panel,inventory_panel,dialogue_panel]: panel.hide()
+	hint_label.hide()
+	AudioManager.set_walking(false)
+	AudioManager.stop_pc_sfx()
+	AudioManager.play_music("wire_puzzle")
+	mode = "last_build"
+	if not is_instance_valid(last_build):
+		last_build = preload("res://scripts/last_build.gd").new()
+		last_build.name = "LastBuild"
+		last_build.z_index = 150
+		ui_layer.add_child(last_build)
+		last_build.checkpoint_changed.connect(_save_last_build)
+		last_build.finished.connect(_finish_last_build)
+		last_build.pause_requested.connect(func(): pause_menu.open_pause())
+	var raw: Variant = minigame_checkpoint.get("state",{})
+	last_build.open(raw if raw is Dictionary else {})
+
+func _save_last_build(snapshot: Dictionary) -> void:
+	minigame_checkpoint = {"kind":"last_build","state":snapshot}
+	save_progress()
+
+func _finish_last_build(result: Dictionary) -> void:
+	minigame_checkpoint.clear()
+	if is_instance_valid(last_build): last_build.hide()
+	story.set_value("last_build_turns",int(result.get("turns",0)))
+	play_chapter_scene("chapter_seven_outro",preload("res://scripts/chapter_seven.gd").final_choice(story.values))
+
+func show_chapter_seven_ending() -> void:
+	_clear_credits_screen()
+	_set_active_chapter(7)
+	app_header("ТИПОЧЕК: КЛЮЧ · ФИНАЛ")
+	mode = "ending"
+	AudioManager.play_music("room")
+	var ending_id := str(story.get_value("final_ending","neutral"))
+	text_at(app_panel,"ПОСЛЕДНЯЯ СБОРКА",Vector2(30,90),Vector2(690,48),27)
+	_multiline_text_at(app_panel,preload("res://scripts/chapter_seven.gd").ending_text(ending_id,story.values),Vector2(30,155),Vector2(690,135),16,Color("d7c6df"))
+	text_at(app_panel,"Финал: " + ending_id.to_upper() + " · Поворотов узлов: %d" % int(story.get_value("last_build_turns",0)),Vector2(30,300),Vector2(690,34),15,Color("e2c791"))
+	_add_ending_actions([
+		{"text":"В комнату","callback":_close_computer},
+		{"text":"Переиграть финал","callback":func():
+			minigame_checkpoint.clear()
+			story.set_value("chapter_seven_complete",false)
+			start_chapter_seven()},
+		{"text":"Титры →","callback":show_credits}
+	], 342.0)
+	if not story.decisions.has("ending_achievement_" + ending_id):
+		story.decide("ending_achievement_" + ending_id,ending_id)
+		AchievementManager.report_story_event("ending",{"id":ending_id})
+
+func show_credits() -> void:
+	_clear_credits_screen()
+	mode = "credits"
+	AudioManager.play_music("credits")
+	for panel in [app_panel,computer_panel,inventory_panel,dialogue_panel]:
+		panel.hide()
+	credits_screen = Control.new()
+	credits_screen.name = "CreditsScreen"
+	credits_screen.size = Vector2(960,540)
+	credits_screen.z_index = 300
+	credits_screen.mouse_filter = Control.MOUSE_FILTER_STOP
+	ui_layer.add_child(credits_screen)
+	var background := ColorRect.new()
+	background.color = Color("08070d")
+	background.size = credits_screen.size
+	background.mouse_filter = Control.MOUSE_FILTER_STOP
+	credits_screen.add_child(background)
+	var viewport := Control.new()
+	viewport.name = "CreditsRollViewport"
+	viewport.position = Vector2.ZERO
+	viewport.size = credits_screen.size
+	viewport.clip_contents = true
+	viewport.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	credits_screen.add_child(viewport)
+	credits_label = RichTextLabel.new()
+	credits_label.position = Vector2(90,credits_screen.size.y)
+	credits_label.size = Vector2(780,460)
+	credits_label.bbcode_enabled = true
+	credits_label.fit_content = false
+	credits_label.scroll_active = false
+	credits_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	credits_label.clip_contents = true
+	credits_label.add_theme_font_size_override("normal_font_size",16)
+	credits_label.add_theme_color_override("default_color",Color("d7c6df"))
+	credits_label.text = "[center][font_size=25][color=#eee5fa][b]ТИПОЧЕК: КЛЮЧ[/b][/color][/font_size]\n\n[color=#e2c791][b]Авторы игры[/b][/color]\nмясник вайбкодер & 2poi_no_vibecoder\n\n[color=#e2c791][b]Визуальное оформление[/b][/color]\nмясник вайбкодер & 2poi_no_vibecoder\n\n[color=#e2c791][b]Сюжетные главы, диалоги и игровые системы[/b][/color]\nмясник вайбкодер & 2poi_no_vibecoder\n\n[color=#e2c791][b]Помощь в разработке[/b][/color]\nChatGPT / Codex\n\n[color=#e2c791][b]Движок[/b][/color]\nGodot Engine\n\n[color=#e2c791][b]пошел нахуй[/b][/color]\nпрохождение стоило 2 аккаунта Codex по 600 рублей[/center]"
+	viewport.add_child(credits_label)
+	credits_buttons.clear()
+	credits_buttons.append(button_at(credits_screen,"Назад к финалу",Vector2(130,480),Vector2(220,42),show_chapter_seven_ending))
+	credits_buttons.append(button_at(credits_screen,"В комнату",Vector2(370,480),Vector2(220,42),_close_computer))
+	credits_buttons.append(button_at(credits_screen,"Главное меню",Vector2(610,480),Vector2(220,42),func():
+		get_tree().change_scene_to_file("res://MainMenu.tscn")))
+	for button in credits_buttons:
+		button.hide()
+	await get_tree().process_frame
+	credits_roll = credits_screen.create_tween()
+	credits_roll.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	credits_roll.set_trans(Tween.TRANS_LINEAR)
+	credits_roll.tween_property(credits_label,"position",Vector2(90,-credits_label.size.y),42.0)
+	credits_roll.finished.connect(_reveal_credits_buttons)
+
+func _reveal_credits_buttons() -> void:
+	if mode != "credits": return
+	for button in credits_buttons:
+		if is_instance_valid(button): button.show()
+
+func _finish_credits_roll() -> void:
+	if credits_roll != null and credits_roll.is_valid():
+		credits_roll.kill()
+	if is_instance_valid(credits_label):
+		credits_label.position.y = -credits_label.size.y
+	_reveal_credits_buttons()
+
+func _clear_credits_screen() -> void:
+	if credits_roll != null and credits_roll.is_valid():
+		credits_roll.kill()
+	credits_roll = null
+	if is_instance_valid(credits_screen):
+		credits_screen.queue_free()
+	credits_screen = null
+	credits_label = null
+	credits_buttons.clear()
 
 func start_chapter_two() -> void:
 	_set_active_chapter(2)
@@ -1212,8 +2185,125 @@ func start_chapter_two() -> void:
 	if story.get_value("grok_date_completed") and not story.get_value("artbay_intro_seen"):
 		start_artrey()
 		return
+	if _maybe_start_call_event(2): return
+	_continue_chapter_two_start()
+
+func _continue_chapter_two_start() -> void:
 	_build_bios_background()
 	play_chapter_scene("chapter_two", preload("res://scripts/chapter_two.gd").opening(story.values))
+
+const CALL_EVENT_IDS := ["call_drx", "call_tables", "call_palych"]
+
+func _start_dev_call_event(event_id: String) -> void:
+	if event_id not in CALL_EVENT_IDS:
+		return
+	_reset_progress()
+	intro_seen = true
+	active_chapter = 2
+	flow = "phone_call_dev_" + event_id
+	mode = "dialogue"
+	play_chapter_scene(flow, _call_event_dialogue(event_id))
+
+func _finish_dev_call_event() -> void:
+	flow = ""
+	mode = "menu"
+	SaveManager.request_dev_picker_reopen()
+	AudioManager.set_walking(false)
+	AudioManager.play_music("menu")
+	get_tree().change_scene_to_file("res://MainMenu.tscn")
+
+func _make_call_event_schedule(chapters: Array[int]) -> Array[Dictionary]:
+	var available := chapters.duplicate()
+	available.shuffle()
+	var events: Array[String] = []
+	for event_id in CALL_EVENT_IDS:
+		events.append(str(event_id))
+	events.shuffle()
+	var result: Array[Dictionary] = []
+	for index in range(mini(events.size(), available.size())):
+		result.append({"chapter":available[index], "id":events[index]})
+	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a.chapter) < int(b.chapter))
+	return result
+
+func _initialize_call_event_schedule() -> void:
+	call_event_schedule = _make_call_event_schedule([2, 3, 4, 5, 6, 7])
+	call_event_completed.clear()
+	call_event_pending = ""
+	call_event_pending_chapter = 0
+	call_event_schedule_initialized = true
+
+func _maybe_start_call_event(chapter: int) -> bool:
+	if SaveManager.is_dev_session() or dialogue_open or mode in ["tab_war", "office_404", "court_trial", "digital_archaeology", "last_build", "credits", "transition"]:
+		return false
+	if not call_event_pending.is_empty():
+		if call_event_pending_chapter == chapter:
+			_start_call_event(call_event_pending, chapter)
+			return true
+		return false
+	for event in call_event_schedule:
+		if int(event.get("chapter", 0)) == chapter and str(event.get("id", "")) not in call_event_completed:
+			_start_call_event(str(event.id), chapter)
+			return true
+	return false
+
+func _start_call_event(event_id: String, chapter: int) -> void:
+	if event_id not in CALL_EVENT_IDS:
+		return
+	call_event_schedule_initialized = true
+	call_event_pending = event_id
+	call_event_pending_chapter = chapter
+	_set_active_chapter(chapter)
+	chapter_computer_pending = 0
+	mode = "dialogue"
+	flow = "phone_call_" + event_id
+	save_progress()
+	play_chapter_scene(flow, _call_event_dialogue(event_id))
+
+func _call_event_dialogue(event_id: String) -> Array:
+	match event_id:
+		"call_drx":
+			return [
+				{"speaker_id":"caller", "speaker":"workersgoincrazy@outlook.com", "text":"Алло, это обма сумаше. Есть предложение: будешь воркать DRX — созваниваться с американцами и проводить с ними сделки на кредиты.", "side":"left"},
+				{"speaker_id":"grat", "speaker":"Грат", "text":"Подожди. То есть я теперь международный специалист?", "side":"right"},
+				{"speaker_id":"caller", "speaker":"workersgoincrazy@outlook.com", "text":"Ну… примерно. Главное — уверенно говорить «договорились».", "side":"left"},
+				{"speaker_id":"grat", "speaker":"Грат", "text":"Я уже вижу строчку в резюме. «Работал с Америкой». Звучит мощно.", "side":"right"},
+				{"speaker_id":"caller", "speaker":"workersgoincrazy@outlook.com", "text":"Прости… ахах—", "side":"left"},
+				{"speaker_id":"grat", "speaker":"Грат", "text":"Алло? Связь оборвалась. Наверное, там уже очередь из американцев.", "side":"right"}
+			]
+		"call_tables":
+			return [
+				{"speaker_id":"caller", "speaker":"mlff", "text":"Слушай, есть вариант. Будешь воркать столы.", "side":"left"},
+				{"speaker_id":"grat", "speaker":"Грат", "text":"Столы… Это которые перспективные?", "side":"right"},
+				{"speaker_id":"caller", "speaker":"mlff", "text":"Очень. Там столы.", "side":"left"},
+				{"speaker_id":"grat", "speaker":"Грат", "text":"Я так и думал. Сколько там направлений? Я могу быстро освоиться.", "side":"right"},
+				{"speaker_id":"grat", "speaker":"Грат", "text":"Когда начинать?", "side":"right"},
+				{"speaker_id":"caller", "speaker":"mlff", "text":"АХАХА…", "side":"left"},
+				{"speaker_id":"grat", "speaker":"Грат", "text":"Сбросил. Наверное, пошёл оформлять. Я почти устроился.", "side":"right"}
+			]
+		"call_palych":
+			return [
+				{"speaker_id":"caller", "speaker":"Палыч", "text":"Грат, иди работать на Wildberries.", "side":"left"},
+				{"speaker_id":"grat", "speaker":"Грат", "text":"Ахуенно.", "side":"right"},
+				{"speaker_id":"caller", "speaker":"Палыч", "text":"Вот и договорились. Всё, пока.", "side":"left"},
+				{"speaker_id":"grat", "speaker":"Грат", "text":"Пока.", "side":"right"}
+			]
+	return []
+
+func _finish_call_event(event_id: String) -> void:
+	flow = ""
+	call_event_pending = ""
+	var chapter := call_event_pending_chapter
+	call_event_pending_chapter = 0
+	if event_id in CALL_EVENT_IDS and event_id not in call_event_completed:
+		call_event_completed.append(event_id)
+		AchievementManager.unlock_achievement(event_id)
+	save_progress()
+	_continue_chapter_after_call(chapter)
+
+func _continue_chapter_after_call(chapter: int) -> void:
+	match chapter:
+		2: _continue_chapter_two_start()
+		3, 4, 5, 6, 7: _prepare_chapter_computer_start(chapter)
 
 func _build_bios_background() -> void:
 	if is_instance_valid(bios_background): bios_background.queue_free()
@@ -1241,19 +2331,23 @@ func show_chapter_two_ending() -> void:
 	AudioManager.play_music("room")
 	app_header("ГЛАВА 2 ЗАВЕРШЕНА")
 	mode = "ending"
-	button_at(app_panel,"Глава 3 →",Vector2(490,330),Vector2(230,42),start_chapter_three)
 	text_at(app_panel,"Свидание в BIOS",Vector2(30,90),Vector2(690,55),28)
 	var dinner_result := "Шеф-повар AMD" if story.get_value("amd_chef_achievement") else "Ужин без технических ингредиентов"
 	var friend_result := "План с Артреем готов." if story.get_value("brainstorm_completed") else ("Артрей остаётся на связи." if story.get_value("artbay_intro_seen") else "Артрей прислал сообщение.")
-	text_at(app_panel,"Получено: key.txt\nКлючей: 0 · " + dinner_result + "\n" + friend_result + "\n\nСледующий шаг — показать файл ЖБТ.\nГлава 3 доступна по кнопке ниже.",Vector2(30,155),Vector2(690,160),19)
-	button_at(app_panel,"В комнату",Vector2(30,330),Vector2(220,42),_close_computer)
+	_multiline_text_at(app_panel,"Получено: key.txt\nКлючей: 0 · " + dinner_result + "\n" + friend_result + "\n\nСледующий шаг — показать файл ЖБТ.\nГлава 3 доступна по кнопке ниже.",Vector2(30,155),Vector2(690,160),17)
+	var actions: Array = [{"text":"В комнату","callback":_close_computer}]
 	if not story.get_value("artbay_intro_seen"):
-		button_at(app_panel,"Прочитать сообщение Артрея",Vector2(280,330),Vector2(440,42),start_artrey)
+		actions.append({"text":"Чат с Артреем","callback":start_artrey})
 	elif not story.get_value("brainstorm_completed"):
-		button_at(app_panel,"Обсудить план с Артреем",Vector2(280,330),Vector2(440,42),func(): Early.show_brainstorm(self))
+		actions.append({"text":"План с Артреем","callback":func(): Early.show_brainstorm(self)})
+	actions.append({"text":"Глава 3 →","callback":start_chapter_three})
+	_add_ending_actions(actions, 346.0)
 
 func _reset_progress() -> void:
 	active_chapter = 0
+	narrative_day = CHAPTER_START_DAY[0]
+	narrative_clock_minutes = CHAPTER_START_MINUTES[0]
+	previous_dialogue_duration = 0
 	if is_instance_valid(tab_war):
 		tab_war.hide()
 		tab_war.queue_free()
@@ -1281,7 +2375,9 @@ func _reset_progress() -> void:
 	copied_code = false
 	chapter_one_stage = 0
 	chapter_two_complete = false
+	chapter_computer_pending = 0
 	chapter_one_evidence.clear()
+	_initialize_call_event_schedule()
 	examined.clear()
 	player.position = SPAWN_POSITION
 	saved_player_position = player.position
@@ -1294,12 +2390,17 @@ func _save_data() -> Dictionary:
 		minigame_checkpoint = {"kind":"office_404","state":office_queue.state.snapshot()}
 	if mode == "court_trial" and is_instance_valid(court_trial) and court_trial.visible:
 		minigame_checkpoint = {"kind":"court_trial","state":court_trial.state.snapshot()}
+	if mode == "digital_archaeology" and is_instance_valid(digital_archaeology) and digital_archaeology.visible:
+		minigame_checkpoint = {"kind":"digital_archaeology","state":digital_archaeology.snapshot()}
+	if mode == "last_build" and is_instance_valid(last_build) and last_build.visible:
+		minigame_checkpoint = {"kind":"last_build","state":last_build.snapshot()}
 	var checkpoint := {}
 	if dialogue_open and is_instance_valid(vn) and vn.visible and flow != "demo":
 		checkpoint = {"flow":flow,"entries":vn.entries,"index":vn.index,"pending_evidence":pending_evidence}
 	return {
 		"version": 2,
 		"active_chapter": active_chapter,
+		"chapter_computer_pending": chapter_computer_pending,
 		"scene": "res://Prologue.tscn",
 		"player_position": {"x": player.position.x, "y": player.position.y},
 		"step": step,
@@ -1310,7 +2411,14 @@ func _save_data() -> Dictionary:
 		"chapter_one_stage": chapter_one_stage,
 		"chapter_two_complete": chapter_two_complete,
 		"chapter_one_evidence": chapter_one_evidence,
+		"call_event_schedule": call_event_schedule.duplicate(true),
+		"call_event_completed": call_event_completed.duplicate(),
+		"call_event_pending": call_event_pending,
+		"call_event_pending_chapter": call_event_pending_chapter,
+		"call_event_schedule_initialized": call_event_schedule_initialized,
 		"notebook_page": page,
+		"narrative_clock_minutes": narrative_clock_minutes,
+		"narrative_day": narrative_day,
 		"story": story.export_data(),
 		"dialogue_checkpoint": checkpoint,
 		"minigame_checkpoint": minigame_checkpoint.duplicate(true)
@@ -1347,6 +2455,7 @@ func load_progress() -> bool:
 	var version := int(data.get("version", 0))
 	if version not in [1, 2]:
 		return false
+	var call_schedule_migrated := not bool(data.get("call_event_schedule_initialized", false))
 	step=clampi(int(data.get("step",0)),0,Step.COMPLETE)
 	intro_seen=bool(data.get("intro_seen",false))
 	consultations=clampi(int(data.get("consultations",0)),0,3)
@@ -1357,6 +2466,37 @@ func load_progress() -> bool:
 	copied_code = bool(data.get("copied_code", step >= Step.SEARCH))
 	chapter_one_stage = clampi(int(data.get("chapter_one_stage", 0)), 0, 2)
 	chapter_two_complete = bool(data.get("chapter_two_complete", false))
+	chapter_computer_pending = clampi(int(data.get("chapter_computer_pending", 0)), 0, 7)
+	call_event_schedule.clear()
+	var raw_schedule: Variant = data.get("call_event_schedule", [])
+	if raw_schedule is Array:
+		var scheduled_chapters: Array[int] = []
+		var scheduled_ids: Array[String] = []
+		for raw_event in raw_schedule:
+			if not raw_event is Dictionary:
+				continue
+			var event_chapter := int(raw_event.get("chapter", 0))
+			var event_id := str(raw_event.get("id", ""))
+			if event_chapter < 2 or event_chapter > 7 or event_id not in CALL_EVENT_IDS:
+				continue
+			if event_chapter in scheduled_chapters or event_id in scheduled_ids:
+				continue
+			scheduled_chapters.append(event_chapter)
+			scheduled_ids.append(event_id)
+			call_event_schedule.append({"chapter":event_chapter, "id":event_id})
+	call_event_completed.clear()
+	var raw_completed: Variant = data.get("call_event_completed", [])
+	if raw_completed is Array:
+		for raw_id in raw_completed:
+			var event_id := str(raw_id)
+			if event_id in CALL_EVENT_IDS and event_id not in call_event_completed:
+				call_event_completed.append(event_id)
+	call_event_pending = str(data.get("call_event_pending", ""))
+	call_event_pending_chapter = clampi(int(data.get("call_event_pending_chapter", 0)), 0, 7)
+	if call_event_pending not in CALL_EVENT_IDS or call_event_pending_chapter < 2:
+		call_event_pending = ""
+		call_event_pending_chapter = 0
+	call_event_schedule_initialized = bool(data.get("call_event_schedule_initialized", false))
 	story.import_data(data.get("story", {}))
 	if not data.has("story") and chapter_two_complete:
 		# Old saves ended at key.txt; preserve that completion and add the new postscript.
@@ -1371,7 +2511,7 @@ func load_progress() -> bool:
 		dialogue_resume = {"flow":"chapter_three_intro","entries":preload("res://scripts/chapter_three.gd").opening(),"index":old_index,"pending_evidence":""}
 	minigame_checkpoint.clear()
 	var saved_game: Variant = data.get("minigame_checkpoint", {})
-	if saved_game is Dictionary and saved_game.get("kind", "") in ["blender", "brainstorm", "tab_war", "office_404", "court_trial"]:
+	if saved_game is Dictionary and saved_game.get("kind", "") in ["blender", "brainstorm", "tab_war", "office_404", "court_trial", "digital_archaeology", "last_build"]:
 		minigame_checkpoint = saved_game.duplicate(true)
 		if minigame_checkpoint.get("kind") == "brainstorm":
 			var raw_picks: Variant = minigame_checkpoint.get("picks", [])
@@ -1387,6 +2527,21 @@ func load_progress() -> bool:
 			chapter_one_evidence.append(item)
 	page = clampi(int(data.get("notebook_page", 0)), 0, 3)
 	_restore_active_chapter(data)
+	if not call_event_schedule_initialized:
+		var remaining_chapters: Array[int] = []
+		if chapter_computer_pending in [3,4,5,6,7] and dialogue_resume.is_empty() and minigame_checkpoint.is_empty():
+			remaining_chapters.append(chapter_computer_pending)
+		for chapter in range(maxi(active_chapter + 1, 2), 8):
+			if chapter not in remaining_chapters:
+				remaining_chapters.append(chapter)
+		call_event_schedule = _make_call_event_schedule(remaining_chapters)
+		call_event_schedule_initialized = true
+		call_event_completed.clear()
+		call_event_pending = ""
+		call_event_pending_chapter = 0
+	narrative_clock_minutes = int(data.get("narrative_clock_minutes", CHAPTER_START_MINUTES[active_chapter]))
+	narrative_day = int(data.get("narrative_day", CHAPTER_START_DAY[active_chapter]))
+	previous_dialogue_duration = 0
 	if version >= 2:
 		var position_data = data.get("player_position", {})
 		if position_data is Dictionary and position_data.has("x") and position_data.has("y"):
@@ -1396,20 +2551,29 @@ func load_progress() -> bool:
 	saved_player_position = player.position
 	save_dirty = false
 	_sync_saved_achievements()
+	if call_schedule_migrated:
+		save_progress()
 	return true
 
 func _restore_active_chapter(data: Dictionary) -> void:
 	# A checkpoint is stronger evidence than a completed chapter, including in old saves.
 	var saved_flow := str(dialogue_resume.get("flow", ""))
 	var kind := str(minigame_checkpoint.get("kind", ""))
-	if saved_flow.begins_with("chapter_five") or kind == "court_trial": active_chapter = 5
+	if not call_event_pending.is_empty(): active_chapter = call_event_pending_chapter
+	elif chapter_computer_pending in [3,4,5,6,7]: active_chapter = chapter_computer_pending
+	elif saved_flow == "chapter_computer_boot": active_chapter = clampi(int(data.get("active_chapter", 0)), 0, 7)
+	elif saved_flow.begins_with("chapter_seven") or kind == "last_build": active_chapter = 7
+	elif saved_flow.begins_with("chapter_six") or kind == "digital_archaeology": active_chapter = 6
+	elif saved_flow.begins_with("chapter_five") or kind == "court_trial": active_chapter = 5
 	elif saved_flow.begins_with("chapter_four") or kind == "office_404": active_chapter = 4
 	elif saved_flow.begins_with("chapter_three") or kind == "tab_war": active_chapter = 3
 	elif saved_flow.begins_with("chapter_two") or saved_flow == "artrey_plan_done" or kind == "brainstorm": active_chapter = 2
 	elif saved_flow.begins_with("chapter_one"): active_chapter = 1
 	elif saved_flow in FLOW: active_chapter = 0
 	elif data.get("active_chapter") is float or data.get("active_chapter") is int:
-		active_chapter = clampi(int(data.active_chapter),0,5)
+		active_chapter = clampi(int(data.active_chapter),0,7)
+	elif story.get_value("chapter_seven_complete"): active_chapter = 7
+	elif story.get_value("chapter_six_complete"): active_chapter = 6
 	elif story.get_value("chapter_five_complete"): active_chapter = 5
 	elif story.get_value("chapter_four_complete"): active_chapter = 4
 	elif story.get_value("chapter_three_complete"): active_chapter = 3
@@ -1420,7 +2584,7 @@ func _restore_active_chapter(data: Dictionary) -> void:
 
 func _read_dialogue_checkpoint(raw: Variant) -> Dictionary:
 	if not raw is Dictionary or not raw.get("entries") is Array: return {}
-	var allowed := ["intro","voice","project","blender","blender_training","blender_replay","help","search","complain","prompt","grok","chapter_one_intro","chapter_one_evidence","chapter_one_ending","chapter_two","chapter_two_artrey","chapter_three","chapter_three_intro","chapter_three_outro","chapter_four_intro","chapter_four_outro","chapter_five_intro","chapter_five_outro","artrey_plan_done","room_optional","optional"]
+	var allowed := ["intro","voice","project","blender","blender_training","blender_replay","help","search","complain","prompt","grok","chapter_one_intro","chapter_one_evidence","chapter_one_ending","chapter_two","chapter_two_artrey","chapter_computer_boot","chapter_three","chapter_three_intro","chapter_three_outro","chapter_four_intro","chapter_four_outro","chapter_five_intro","chapter_five_outro","chapter_six_intro","chapter_six_outro","chapter_seven_intro","chapter_seven_outro","polaroid_easter_egg","artrey_plan_done","room_optional","optional","phone_call_call_drx","phone_call_call_tables","phone_call_call_palych"]
 	if str(raw.get("flow", "")) not in allowed: return {}
 	var entries: Array = raw.entries
 	if entries.is_empty() or entries.size() > 512: return {}
@@ -1451,6 +2615,8 @@ func _sync_saved_achievements() -> void:
 		AchievementManager.unlock_achievement("artbay_first_chat")
 	if story.get_value("brainstorm_completed"):
 		AchievementManager.unlock_achievement("artbay_brainstorm")
+	for call_id in call_event_completed:
+		AchievementManager.unlock_achievement(call_id)
 
 func has_unsaved_progress() -> bool:
 	return save_dirty or player.position.distance_to(saved_player_position) > 0.5
@@ -1458,5 +2624,3 @@ func has_unsaved_progress() -> bool:
 func _notification(what: int) -> void:
 	if what==NOTIFICATION_WM_CLOSE_REQUEST:
 		save_progress()
-
-

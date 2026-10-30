@@ -68,9 +68,9 @@ func _build_ui() -> void:
 	_update_status()
 
 	hint_label = Label.new()
-	hint_label.position = Vector2(140, 500)
-	hint_label.size = Vector2(680, 26)
-	hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint_label.position = Vector2(14, 108)
+	hint_label.size = Vector2(224, 30)
+	hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint_label.add_theme_font_size_override("font_size", 15)
 	hint_label.add_theme_color_override("font_color", Color("#d5c6f4"))
 	ui_layer.add_child(hint_label)
@@ -197,9 +197,9 @@ func _physics_process(delta: float) -> void:
 	player.move_and_slide()
 	nearby_object = _get_nearby_object()
 	if nearby_object != "":
-		_show_hint("E — взаимодействовать: " + _object_name(nearby_object))
+		_show_hint("Рядом: %s · E — действие" % _object_name(nearby_object))
 	else:
-		_show_hint("WASD / стрелки — ходить   •   E — взаимодействовать   •   I — инвентарь")
+		_show_hint("Осмотрись и выбери, с чего начать.")
 	if Input.is_action_just_pressed("interact") or Input.is_key_pressed(KEY_E) and Input.is_action_just_pressed("ui_accept"):
 		_interact()
 	if Input.is_key_pressed(KEY_I) and Input.is_action_just_pressed("ui_accept"):

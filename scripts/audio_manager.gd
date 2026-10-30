@@ -3,10 +3,20 @@ extends Node
 const MUSIC_PATHS := {
 	"menu": "res://assets/audio/main_menu.ogg",
 	"room": "res://assets/audio/room.ogg",
-	"dialogue": "res://assets/audio/dialogues.ogg"
+	"dialogue": "res://assets/audio/dialogues.ogg",
+	"credits": "res://assets/audio/titri.ogg",
+	"tab_war": "res://assets/audio/tab_war_ost.ogg",
+	"wire_puzzle": "res://assets/audio/wire_puzzle_ost.ogg",
+	"file_investigation": "res://assets/audio/file_investigation_ost.ogg",
+	"queue_and_trial": "res://assets/audio/queue_and_trial_ost.ogg"
 }
 const WALK_PATH := "res://assets/audio/walk.ogg"
 const PC_PATH := "res://assets/audio/pc.ogg"
+const CALL_SFX_PATHS := {
+	"call_drx": "res://assets/audio/call_worker_drx.ogg",
+	"call_tables": "res://assets/audio/call_mllf_table.ogg",
+	"call_palych": "res://assets/audio/call_palich_wb.ogg"
+}
 const SILENCE_DB := -80.0
 
 @export_range(0.0, 5.0, 0.05) var default_fade_duration := 1.0
@@ -23,6 +33,8 @@ var _music_state := ""
 var _fade_tween: Tween
 var _walk_player: AudioStreamPlayer
 var _pc_player: AudioStreamPlayer
+var _call_sfx_player: AudioStreamPlayer
+var _music_ducked_for_call := false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -47,6 +59,12 @@ func _ready() -> void:
 	_pc_player.volume_db = pc_volume_db
 	_pc_player.stream = load(PC_PATH)
 	add_child(_pc_player)
+	_call_sfx_player = AudioStreamPlayer.new()
+	_call_sfx_player.name = "CallEventSFX"
+	_call_sfx_player.bus = &"SFX"
+	_call_sfx_player.volume_db = 0.0
+	_call_sfx_player.finished.connect(_restore_music_after_call)
+	add_child(_call_sfx_player)
 
 func _ensure_bus(bus_name: String) -> void:
 	if AudioServer.get_bus_index(bus_name) >= 0:
@@ -93,7 +111,8 @@ func play_music(state: String, fade_duration: float = -1.0) -> void:
 	_fade_tween.set_parallel(true)
 	for player in _music_players:
 		if player == target:
-			_fade_tween.tween_property(player, "volume_db", music_player_volume_db, duration)
+			var target_volume := SILENCE_DB if _music_ducked_for_call else music_player_volume_db
+			_fade_tween.tween_property(player, "volume_db", target_volume, duration)
 		elif player.playing:
 			_fade_tween.tween_property(player, "volume_db", SILENCE_DB, duration)
 	var expected_target := target
@@ -139,6 +158,42 @@ func play_pc_sfx() -> void:
 func stop_pc_sfx() -> void:
 	if _pc_player != null and _pc_player.playing:
 		_pc_player.stop()
+
+func play_call_sfx(event_id: String) -> void:
+	if _call_sfx_player == null or not CALL_SFX_PATHS.has(event_id):
+		return
+	var stream := load(str(CALL_SFX_PATHS[event_id])) as AudioStream
+	if stream == null:
+		push_warning("Call event sound not found: " + event_id)
+		return
+	_call_sfx_player.stop()
+	_call_sfx_player.stream = stream
+	_music_ducked_for_call = true
+	if _fade_tween != null and _fade_tween.is_valid():
+		_fade_tween.kill()
+	_fade_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
+	for player in _music_players:
+		if player.playing:
+			_fade_tween.tween_property(player, "volume_db", SILENCE_DB, 0.18)
+	_call_sfx_player.play()
+
+func _restore_music_after_call() -> void:
+	if not _music_ducked_for_call:
+		return
+	_music_ducked_for_call = false
+	if _fade_tween != null and _fade_tween.is_valid():
+		_fade_tween.kill()
+	_fade_tween = create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS).set_parallel(true)
+	for player in _music_players:
+		if not player.playing:
+			continue
+		var target_volume := music_player_volume_db if player == _active_music else SILENCE_DB
+		_fade_tween.tween_property(player, "volume_db", target_volume, 0.45)
+	_fade_tween.chain().tween_callback(func():
+		for player in _music_players:
+			if player != _active_music:
+				player.stop()
+	)
 
 func set_music_volume(linear_value: float) -> void:
 	_set_bus_volume("Music", linear_value)

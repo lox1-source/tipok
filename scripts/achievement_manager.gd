@@ -41,7 +41,11 @@ const DEFINITIONS: Array[Dictionary] = [
 	{"id":"approved_ending", "name":"ОДОБРЕНО", "description":"Открыть секретную концовку Министерства Ключевых Дел.", "category":"Секретные", "icon":"?", "secret":true, "secret_description":"Не стоило ставить печать на компьютер."},
 	{"id":"triple_affection_ending", "name":"Нас забирают за превышение симпатии", "description":"Открыть секретную общую концовку.", "category":"Секретные", "icon":"?", "secret":true, "secret_description":"Три вкладки. Одно решение. Слишком много окон."},
 	{"id":"all_endings", "name":"Все дороги ведут к ключу", "description":"Открыть все основные концовки игры.", "category":"Концовки", "icon":"⌘"},
-	{"id":"platinum", "name":"Платиновый Типочек", "description":"Получить все остальные достижения, включая секретные.", "category":"Секретные", "icon":"★"}
+	{"id":"platinum", "name":"Платиновый Типочек", "description":"Получить все остальные достижения, включая секретные.", "category":"Секретные", "icon":"★"},
+	{"id":"polaroid_secret", "name":"пососала-попрыгала", "description":"Посмотреть секретную историю полароида в комнате.", "category":"Секретные", "icon":"?", "secret":true, "secret_description":"???"},
+	{"id":"call_drx", "name":"звонок workersgoincrazy@outlook.com", "description":"Дослушать загадочное предложение воркать DRX.", "category":"Сюжет", "icon":"☎"},
+	{"id":"call_tables", "name":"звонок mlff", "description":"Узнать о перспективной работе со столами.", "category":"Сюжет", "icon":"☎"},
+	{"id":"call_palych", "name":"звонок Палыч", "description":"Согласиться на работу в Wildberries.", "category":"Сюжет", "icon":"☎"}
 ]
 
 var unlocked: Dictionary = {}
@@ -57,6 +61,15 @@ var _toast_icon: TextureRect
 var _icon_atlas: Texture2D
 
 func get_icon(achievement_id: String, hide_secret: bool = false) -> Texture2D:
+	if achievement_id == "polaroid_secret" and not hide_secret:
+		return load("res://assets/ui/achievements/polaroid-secret.png") as Texture2D
+	var special_icons := {
+		"call_drx": "res://assets/ui/achievements/call-drx.png",
+		"call_tables": "res://assets/ui/achievements/call-tables.png",
+		"call_palych": "res://assets/ui/achievements/call-palych.png"
+	}
+	if not hide_secret and special_icons.has(achievement_id):
+		return load(str(special_icons[achievement_id])) as Texture2D
 	if _icon_atlas == null:
 		_icon_atlas = load("res://assets/ui/achievements/icons-atlas.png") as Texture2D
 	if _icon_atlas == null: return null

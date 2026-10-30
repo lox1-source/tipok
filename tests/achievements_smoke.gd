@@ -21,7 +21,7 @@ func run() -> void:
 	manager.notifications_enabled = false
 	manager.save_path = temp_path
 	manager.unlocked.clear()
-	check(manager.get_total_count() == 34, "каталог содержит 33 запрошенных достижения и дополнительную концовку")
+	check(manager.get_total_count() == 38, "каталог содержит существующие достижения и три телефонные пасхалки")
 	check(manager.unlock_achievement("first_choice"), "достижение открывается один раз")
 	check(not manager.unlock_achievement("first_choice"), "повторно достижение не выдаётся")
 	check(not manager.get_unlocked_at("first_choice").is_empty(), "сохраняется дата получения")
@@ -45,9 +45,13 @@ func run() -> void:
 	var regions := {}
 	for definition in manager.get_catalog():
 		var icon: Texture2D = manager.get_icon(str(definition.id))
-		check(icon is AtlasTexture and icon.get_size().x > 0, "иконка загружается: " + str(definition.id))
-		if icon is AtlasTexture: regions[str(icon.region)] = true
-	check(regions.size() == manager.get_total_count(), "все достижения имеют разные ячейки атласа")
+		var is_standalone_icon := str(definition.id) in ["polaroid_secret", "call_drx", "call_tables", "call_palych"]
+		check(icon != null and icon.get_size().x > 0, "иконка загружается: " + str(definition.id))
+		if is_standalone_icon:
+			check(not icon is AtlasTexture, "особая награда подключена отдельной текстурой: " + str(definition.id))
+		elif icon is AtlasTexture:
+			regions[str(icon.region)] = true
+	check(regions.size() == manager.get_total_count() - 4, "все награды атласа сохраняют разные ячейки")
 	check(manager.get_icon("approved_ending",true).region != manager.get_icon("approved_ending").region, "секретная иконка скрыта до получения")
 	menu._open_achievements()
 	check(menu.achievements_panel.visible, "экран достижений открывается")
@@ -64,7 +68,7 @@ func run() -> void:
 	check(menu.achievement_rows.get_child_count() == 1, "фильтр полученных показывает только открытое достижение")
 	menu.selected_state = "Не полученные"
 	menu._refresh_achievements()
-	check(menu.achievement_rows.get_child_count() == 33, "фильтр закрытых исключает открытое достижение")
+	check(menu.achievement_rows.get_child_count() == manager.get_total_count() - 1, "фильтр закрытых исключает открытое достижение")
 	manager.report_story_event("ending", {"id":"not_an_ending"})
 	check(not manager.has_achievement("any_ending"), "неизвестная концовка не выдаёт достижение")
 	for ending in ["grok", "jbt", "artbay", "artbay_bad", "neutral", "team", "instrumental"]:

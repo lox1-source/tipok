@@ -4,11 +4,16 @@ var game: Variant
 func _initialize() -> void: call_deferred("run")
 func check(chapter: int, context: String) -> void:
 	game.refresh_goal()
-	var expected := "ГРАТ / ПРОЛОГ" if chapter == 0 else "ГРАТ / ГЛАВА %d" % chapter
+	var expected := "ТИПОЧЕК: КЛЮЧ · ПРОЛОГ" if chapter == 0 else "ТИПОЧЕК: КЛЮЧ · ГЛАВА %d" % chapter
 	if game.active_chapter == chapter and game.chapter_title.text == expected: print("PASS: ",context)
 	else:
 		failures.append(context)
 		push_error(context+" -> "+str(game.chapter_title.text))
+func check_condition(value: bool, context: String) -> void:
+	if value: print("PASS: ",context)
+	else:
+		failures.append(context)
+		push_error(context)
 func reload_game() -> void:
 	game.save_progress()
 	var path: String = game.save_path
@@ -28,6 +33,7 @@ func run() -> void:
 	game.save_path = "res://tests/chapter_label_temp.json"
 	root.add_child(game)
 	game._reset_progress()
+	game.call_event_schedule.clear()
 	check(0,"New game shows prologue")
 	game.intro_seen = true
 	game.step = 8
@@ -50,9 +56,11 @@ func run() -> void:
 	check(2,"Artrey postscript remains in chapter 2")
 	game.chapter_two_complete = true
 	game.start_chapter_three()
-	check(3,"Chapter 3 introduction stays chapter 3 despite chapter 2 completion")
+	check(3,"Chapter 3 room launch stays chapter 3 despite chapter 2 completion")
+	check_condition(game.mode == "room" and game.chapter_computer_pending == 3,"Chapter start waits for the player to use the computer")
 	await reload_game()
-	check(3,"Chapter 3 introduction reload keeps chapter 3")
+	check(3,"Pending computer launch reload keeps chapter 3")
+	check_condition(game.mode == "room" and game.chapter_computer_pending == 3,"Pending computer launch survives Continue")
 	game.start_tab_war()
 	check(3,"Tab war belongs to chapter 3")
 	await reload_game()
@@ -89,6 +97,7 @@ func run() -> void:
 	game._restore_active_chapter({})
 	check(3,"Legacy completed save identifies chapter 3")
 	game._reset_progress()
+	game.call_event_schedule.clear()
 	check(0,"Restart resets chapter label")
 	game.queue_free()
 	await process_frame

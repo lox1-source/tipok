@@ -2,10 +2,10 @@ extends RefCounted
 
 const DEFAULTS := {
 	"tab_war_completed":false, "tab_war_won":false, "tab_war_result":{},
-	"chapter_three_complete":false, "chapter_four_complete":false, "chapter_five_complete":false, "court_evidence_quality":0, "lied_in_court":false, "affection_grok":0, "affection_gpt":0, "affection_artbay":0,
+	"chapter_three_complete":false, "chapter_four_complete":false, "chapter_five_complete":false, "chapter_six_complete":false, "chapter_seven_complete":false, "court_evidence_quality":0, "lied_in_court":false, "affection_grok":0, "affection_gpt":0, "affection_artbay":0,
 	"grok_trust":false, "grok_without_key":false, "gpt_trust":false, "gpt_boundaries":false,
 	"artbay_trust":false, "artbay_trust_level":0, "artbay_suspicion":0,
-	"artbay_evidence":false, "project_ownership_proven":false, "game_backup_created":false,
+	"artbay_evidence":false, "project_ownership_proven":false, "game_backup_created":false, "artbay_contract_signed":false, "artbay_control_taken":false, "final_ending":"", "last_build_turns":0,
 	"compared_characters_often":false, "comparison_count":0, "lies_count":0,
 	"learned_blender":false, "bad_key_export":false, "model_game_completed":false,
 	"grok_date_completed":false, "dinner_finished":false, "amd_chef_achievement":false,
@@ -14,6 +14,7 @@ const DEFAULTS := {
 	"bios_memory_kept":false, "old_project_notes_found":false, "fast_money":false,
 	"project_backup_snapshot":{}, "project_access_shared":false, "backup_candidate":false,
 	"exploration_three_seen":false, "exploration_all_seen":false,
+	"polaroid_easter_egg_seen":false,
 	"defused_tab_war":false, "stamp_obtained":false, "stamp_stolen":false,
 	"secret_protocol":false, "honest_final_choice":false
 }

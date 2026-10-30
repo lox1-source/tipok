@@ -5,6 +5,7 @@ var menu_panel: Panel
 var settings_panel: Panel
 var status_label: Label
 var leave_confirmation: ConfirmationDialog
+var game_hud_visibility: Dictionary = {}
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -16,12 +17,15 @@ func setup(game_node: Node) -> void:
 	game = game_node
 
 func _build() -> void:
+	mouse_filter = Control.MOUSE_FILTER_STOP
 	var dim := ColorRect.new()
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.color = Color(0.025, 0.02, 0.055, 0.83)
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dim)
 	menu_panel = Panel.new()
+	menu_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	menu_panel.z_index = 1
 	menu_panel.position = Vector2(300, 54)
 	menu_panel.size = Vector2(360, 432)
 	var style := StyleBoxFlat.new()
@@ -53,6 +57,7 @@ func _build() -> void:
 	status_label.add_theme_color_override("font_color", Color("c8b8d5"))
 	menu_panel.add_child(status_label)
 	settings_panel = preload("res://scripts/settings_panel.gd").new()
+	settings_panel.z_index = 2
 	add_child(settings_panel)
 	settings_panel.closed.connect(_close_settings)
 	leave_confirmation = ConfirmationDialog.new()
@@ -74,8 +79,11 @@ func _pause_button(text: String, y: float, action: Callable) -> Button:
 	return button
 
 func open_pause() -> void:
+	# GUI input follows sibling order, independently of z_index.
+	move_to_front()
 	if visible:
 		return
+	_set_game_hud_visible(false)
 	status_label.text = "Esc — вернуться в игру"
 	menu_panel.show()
 	settings_panel.hide()
@@ -87,6 +95,24 @@ func close_pause() -> void:
 	settings_panel.hide()
 	hide()
 	get_tree().paused = false
+	_set_game_hud_visible(true)
+
+func _set_game_hud_visible(should_show: bool) -> void:
+	if game == null:
+		return
+	for property in ["chapter_title", "status_label", "goal_label", "hint_label"]:
+		var node: Variant = game.get(property)
+		if not node is CanvasItem:
+			continue
+		if should_show:
+			if game_hud_visibility.has(property):
+				node.visible = bool(game_hud_visibility[property])
+		else:
+			if not game_hud_visibility.has(property):
+				game_hud_visibility[property] = node.visible
+			node.hide()
+	if should_show:
+		game_hud_visibility.clear()
 
 func _open_settings() -> void:
 	menu_panel.hide()
@@ -110,6 +136,7 @@ func _main_menu_pressed() -> void:
 		_return_to_main_menu()
 
 func _return_to_main_menu() -> void:
+	_set_game_hud_visible(true)
 	get_tree().paused = false
 	AudioManager.set_walking(false)
 	AudioManager.stop_pc_sfx()
@@ -126,3 +153,4 @@ func _unhandled_input(event: InputEvent) -> void:
 	else:
 		close_pause()
 	get_viewport().set_input_as_handled()
+

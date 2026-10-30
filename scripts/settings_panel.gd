@@ -1,9 +1,13 @@
 extends Panel
 
+const UIButtons = preload("res://scripts/ui_buttons.gd")
+
 signal closed
 
 var music_slider: HSlider
 var sfx_slider: HSlider
+var music_value_label: Label
+var sfx_value_label: Label
 var fullscreen_check: CheckButton
 var resolution_option: OptionButton
 var monitor_option: OptionButton
@@ -26,24 +30,28 @@ func _label(text: String, pos: Vector2, area: Vector2, font_size: int = 18, colo
 	return label
 
 func _build() -> void:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color("171322")
-	style.border_color = Color("8e78a7")
-	style.set_border_width_all(3)
-	style.set_corner_radius_all(7)
-	add_theme_stylebox_override("panel", style)
+	UIButtons.apply_menu_panel(self)
 	_label("НАСТРОЙКИ", Vector2(28, 20), Vector2(480, 38), 27)
 	_label("Музыка", Vector2(30, 77), Vector2(150, 28), 17, Color("d8c8e8"))
 	music_slider = _slider(Vector2(190, 75))
-	music_slider.value_changed.connect(func(value: float): SettingsManager.set_music_volume(value / 100.0))
+	music_value_label = _label("100%", Vector2(473, 77), Vector2(48, 28), 14, Color("d4b276"))
+	music_slider.value_changed.connect(func(value: float):
+		SettingsManager.set_music_volume(value / 100.0)
+		music_value_label.text = "%d%%" % int(value)
+	)
 	_label("Звуки", Vector2(30, 127), Vector2(150, 28), 17, Color("d8c8e8"))
 	sfx_slider = _slider(Vector2(190, 125))
-	sfx_slider.value_changed.connect(func(value: float): SettingsManager.set_sfx_volume(value / 100.0))
+	sfx_value_label = _label("100%", Vector2(473, 127), Vector2(48, 28), 14, Color("d4b276"))
+	sfx_slider.value_changed.connect(func(value: float):
+		SettingsManager.set_sfx_volume(value / 100.0)
+		sfx_value_label.text = "%d%%" % int(value)
+	)
 	var separator := HSeparator.new()
 	separator.position = Vector2(28, 179)
 	separator.size = Vector2(484, 8)
 	add_child(separator)
 	fullscreen_check = CheckButton.new()
+	UIButtons.apply_menu_button(fullscreen_check)
 	fullscreen_check.text = "Полноэкранный режим"
 	fullscreen_check.position = Vector2(25, 205)
 	fullscreen_check.size = Vector2(300, 38)
@@ -52,6 +60,7 @@ func _build() -> void:
 	add_child(fullscreen_check)
 	_label("Разрешение окна", Vector2(30, 261), Vector2(185, 31), 17, Color("d8c8e8"))
 	resolution_option = OptionButton.new()
+	UIButtons.apply_menu_button(resolution_option)
 	resolution_option.position = Vector2(230, 255)
 	resolution_option.size = Vector2(270, 40)
 	resolution_option.add_theme_font_size_override("font_size", 16)
@@ -62,6 +71,7 @@ func _build() -> void:
 	add_child(resolution_option)
 	_label("Монитор", Vector2(30, 311), Vector2(185, 31), 17, Color("d8c8e8"))
 	monitor_option = OptionButton.new()
+	UIButtons.apply_menu_button(monitor_option)
 	monitor_option.position = Vector2(230, 305)
 	monitor_option.size = Vector2(270, 40)
 	monitor_option.add_theme_font_size_override("font_size", 15)
@@ -70,6 +80,7 @@ func _build() -> void:
 	var hint := _label("Внутренняя сцена остаётся 960 × 540 — пиксели не растягиваются.", Vector2(30, 359), Vector2(480, 42), 13, Color("a99ab8"))
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var back := Button.new()
+	UIButtons.apply_menu_button(back)
 	back.text = "Назад"
 	back.position = Vector2(30, 405)
 	back.size = Vector2(150, 40)
@@ -80,12 +91,13 @@ func _build() -> void:
 func _slider(pos: Vector2) -> HSlider:
 	var slider := HSlider.new()
 	slider.position = pos
-	slider.size = Vector2(310, 35)
+	slider.size = Vector2(270, 35)
 	slider.min_value = 0.0
 	slider.max_value = 100.0
 	slider.step = 1.0
 	slider.tick_count = 5
 	slider.ticks_on_borders = true
+	UIButtons.apply_slider(slider)
 	add_child(slider)
 	return slider
 
@@ -109,6 +121,8 @@ func _sync() -> void:
 			break
 	music_slider.set_value_no_signal(SettingsManager.music_volume * 100.0)
 	sfx_slider.set_value_no_signal(SettingsManager.sfx_volume * 100.0)
+	music_value_label.text = "%d%%" % int(music_slider.value)
+	sfx_value_label.text = "%d%%" % int(sfx_slider.value)
 	fullscreen_check.set_pressed_no_signal(SettingsManager.fullscreen)
 	for index in range(resolution_option.item_count):
 		if resolution_option.get_item_metadata(index) == SettingsManager.resolution:

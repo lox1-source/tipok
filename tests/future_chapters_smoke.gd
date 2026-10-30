@@ -152,7 +152,7 @@ func run() -> void:
 	game.vn.advance()
 	check(game.vn.choice_buttons.size() <= 4,"страница решений проекта помещается в диалоговую панель")
 	game.vn.select_choice(0)
-	for _i in range(24):
+	for _i in range(120):
 		if not game.dialogue_open: break
 		if not game.vn.choice_buttons.is_empty(): game.vn.select_choice(0)
 		else: game.vn.advance()

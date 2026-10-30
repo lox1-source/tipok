@@ -7,6 +7,9 @@ var launch_mode := "direct"
 var dev_chapter := 0
 var dev_session := false
 var dev_call_event := ""
+var dev_minigame := ""
+var dev_credits := false
+var dev_ending := ""
 var reopen_dev_picker := false
 var last_error := ""
 var save_path := SAVE_PATH
@@ -23,6 +26,9 @@ func consume_launch_mode() -> String:
 func set_dev_chapter(chapter: int) -> void:
 	dev_chapter = clampi(chapter, 0, 7)
 	dev_call_event = ""
+	dev_minigame = ""
+	dev_credits = false
+	dev_ending = ""
 	dev_session = dev_chapter > 0
 	launch_mode = "direct"
 
@@ -33,6 +39,9 @@ func consume_dev_chapter() -> int:
 
 func set_dev_call_event(event_id: String) -> void:
 	dev_chapter = 0
+	dev_minigame = ""
+	dev_credits = false
+	dev_ending = ""
 	dev_call_event = event_id if event_id in ["call_drx", "call_tables", "call_palych"] else ""
 	dev_session = not dev_call_event.is_empty()
 	launch_mode = "direct"
@@ -40,6 +49,48 @@ func set_dev_call_event(event_id: String) -> void:
 func consume_dev_call_event() -> String:
 	var value := dev_call_event
 	dev_call_event = ""
+	return value
+
+func set_dev_minigame(game_id: String) -> void:
+	dev_chapter = 0
+	dev_call_event = ""
+	dev_credits = false
+	dev_ending = ""
+	dev_minigame = game_id if game_id in ["tab_war", "wire_puzzle", "digital_archaeology", "office_queue", "court_trial"] else ""
+	dev_session = not dev_minigame.is_empty()
+	launch_mode = "direct"
+
+func consume_dev_minigame() -> String:
+	var value := dev_minigame
+	dev_minigame = ""
+	return value
+
+func set_dev_credits() -> void:
+	dev_chapter = 0
+	dev_call_event = ""
+	dev_minigame = ""
+	dev_ending = ""
+	dev_credits = true
+	dev_session = true
+	launch_mode = "direct"
+
+func consume_dev_credits() -> bool:
+	var value := dev_credits
+	dev_credits = false
+	return value
+
+func set_dev_ending(ending_id: String) -> void:
+	dev_chapter = 0
+	dev_call_event = ""
+	dev_minigame = ""
+	dev_credits = false
+	dev_ending = ending_id if ending_id in ["grok", "jbt", "artbay", "artbay_bad", "team", "ministry", "triple", "neutral", "instrumental"] else ""
+	dev_session = not dev_ending.is_empty()
+	launch_mode = "direct"
+
+func consume_dev_ending() -> String:
+	var value := dev_ending
+	dev_ending = ""
 	return value
 
 func request_dev_picker_reopen() -> void:

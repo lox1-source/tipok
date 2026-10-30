@@ -1,4 +1,5 @@
 extends Control
+const MiniGameStyle = preload("res://scripts/minigame_skin.gd")
 
 signal checkpoint_changed(data: Dictionary)
 signal finished(result: Dictionary)
@@ -59,6 +60,7 @@ func _ready() -> void:
 	status_label = _label("Сначала открой несколько записей.",Vector2(420,386),Vector2(500,45),14,Color("e5c98f"))
 	connect_button = _button("Связать выбранные улики",Vector2(348,451),Vector2(264,42),_connect)
 	_render()
+	MiniGameStyle.apply(self, Color("1a2634"), Color("6b8eae"), Color("c3dfef"))
 
 func open(snapshot: Dictionary = {}) -> void:
 	found.clear()

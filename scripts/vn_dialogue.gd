@@ -1,5 +1,7 @@
 extends Control
 
+const UIButtons = preload("res://scripts/ui_buttons.gd")
+
 ## Reusable visual-novel dialogue widget.
 ## Entries are dictionaries with speaker_id, speaker, emotion, side, text and
 ## an optional choices array: [{"text": "...", "id": "...", "next": 2}].
@@ -9,7 +11,7 @@ signal line_changed(index: int)
 signal choice_selected(id: String)
 
 const LOGICAL_SIZE := Vector2(960, 540)
-const PANEL_RECT := Rect2(20, 358, 920, 162)
+const PANEL_RECT := Rect2(18, 322, 924, 198)
 const PORTRAIT_SIZE := Vector2(292, 286)
 const PORTRAIT_TOP := 78.0
 const TYPE_SPEED := 46.0
@@ -30,12 +32,13 @@ var _text: RichTextLabel
 var _continue: Button
 var _counter: Label
 var _hint: Label
-var _choice_layer: VBoxContainer
+var _choice_layer: Control
 var _theme_font := ThemeDB.fallback_font
 var _shadow_material: ShaderMaterial
 var _inactive_portrait_shader: Shader
 var _silhouette_shadows := {}
 var _dialogue_window_layer: Panel
+var _active_dialogue_rect := PANEL_RECT
 var _line_has_portraits := false
 var phone_chat_mode := false
 var phone_call_mode := false
@@ -78,11 +81,7 @@ func _draw() -> void:
 		return
 	if phone_chat_mode:
 		draw_rect(Rect2(Vector2.ZERO, LOGICAL_SIZE), Color(0.025, 0.018, 0.055, 0.34))
-		var phone := StyleBoxFlat.new()
-		phone.bg_color = Color("11131c")
-		phone.border_color = Color("88739a")
-		phone.set_border_width_all(3)
-		phone.set_corner_radius_all(22)
+		var phone := UIButtons.panel_box()
 		draw_style_box(phone, PHONE_RECT)
 		var header := StyleBoxFlat.new()
 		header.bg_color = Color("303452") if phone_call_discord else (Color("292437") if not phone_call_mode else Color("30283a"))
@@ -110,18 +109,8 @@ func _draw() -> void:
 			draw_string(font, Vector2(380, 98), "ДРУЗЬЯ", HORIZONTAL_ALIGNMENT_LEFT, 170, 16, Color("f0eaf7"))
 			draw_string(font, Vector2(381, 117), "Артрей · в сети", HORIZONTAL_ALIGNMENT_LEFT, 170, 11, Color("9bc8a9"))
 		return
-	# A cool transparent veil keeps the room visible while making faces/text read.
+	# Keep the room legible while the textured VN window sits above the portraits.
 	draw_rect(Rect2(Vector2.ZERO, LOGICAL_SIZE), Color(0.025, 0.018, 0.055, 0.22))
-	var panel := StyleBoxFlat.new()
-	panel.bg_color = Color(0.055, 0.038, 0.10, 0.97)
-	panel.border_color = Color(0.66, 0.52, 0.78, 0.92)
-	panel.set_border_width_all(2)
-	panel.set_corner_radius_all(12)
-	panel.shadow_color = Color(0.01, 0.005, 0.025, 0.75)
-	panel.shadow_size = 12
-	draw_style_box(panel, PANEL_RECT)
-	# Gold separator gives the text box a visual anchor without hiding the scene.
-	draw_line(Vector2(42, 405), Vector2(918, 405), Color(0.75, 0.62, 0.82, 0.22), 1.0)
 
 func _create_portrait_slots() -> void:
 	var shadow_shader := Shader.new()
@@ -182,19 +171,14 @@ func _create_portrait_slots() -> void:
 	dialogue_panel.name = "DialogueWindowLayer"
 	dialogue_panel.position = PANEL_RECT.position
 	dialogue_panel.size = PANEL_RECT.size
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.055, 0.038, 0.10, 0.99)
-	panel_style.border_color = Color(0.66, 0.52, 0.78, 0.92)
-	panel_style.set_border_width_all(2)
-	panel_style.set_corner_radius_all(12)
-	dialogue_panel.add_theme_stylebox_override("panel", panel_style)
+	UIButtons.apply_panel(dialogue_panel)
 	dialogue_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dialogue_panel)
 
 func _create_dialogue_controls() -> void:
 	_speaker_label = Label.new()
-	_speaker_label.position = Vector2(42, 367)
-	_speaker_label.size = Vector2(270, 38)
+	_speaker_label.position = Vector2(42, 332)
+	_speaker_label.size = Vector2(270, 34)
 	_speaker_label.add_theme_font_size_override("font_size", 20)
 	_speaker_label.add_theme_color_override("font_color", Color("ffe0a9"))
 	_speaker_label.add_theme_color_override("font_outline_color", Color(0.035, 0.018, 0.07, 0.98))
@@ -205,8 +189,8 @@ func _create_dialogue_controls() -> void:
 	add_child(_speaker_label)
 
 	_text = RichTextLabel.new()
-	_text.position = Vector2(43, 414)
-	_text.size = Vector2(850, 57)
+	_text.position = Vector2(43, 380)
+	_text.size = Vector2(872, 78)
 	_text.bbcode_enabled = true
 	_text.fit_content = false
 	_text.scroll_active = true
@@ -218,17 +202,17 @@ func _create_dialogue_controls() -> void:
 	_text.mouse_filter = Control.MOUSE_FILTER_PASS
 	add_child(_text)
 
-	_choice_layer = VBoxContainer.new()
-	_choice_layer.position = Vector2(324, 164)
-	_choice_layer.size = Vector2(312, 174)
-	_choice_layer.add_theme_constant_override("separation", 7)
+	_choice_layer = Control.new()
+	_choice_layer.position = Vector2(72, 414)
+	_choice_layer.size = Vector2(816, 98)
+	_choice_layer.clip_contents = true
 	_choice_layer.mouse_filter = Control.MOUSE_FILTER_PASS
 	add_child(_choice_layer)
 
 	_continue = Button.new()
 	_continue.name = "ContinueButton"
-	_continue.position = Vector2(705, 474)
-	_continue.size = Vector2(205, 32)
+	_continue.position = Vector2(716, 468)
+	_continue.size = Vector2(196, 38)
 	_continue.focus_mode = Control.FOCUS_NONE
 	_continue.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	_continue.add_theme_font_size_override("font_size", 15)
@@ -238,7 +222,7 @@ func _create_dialogue_controls() -> void:
 
 	_hint = Label.new()
 	_hint.position = Vector2(44, 481)
-	_hint.size = Vector2(590, 24)
+	_hint.size = Vector2(630, 24)
 	_hint.add_theme_font_size_override("font_size", 13)
 	_hint.add_theme_color_override("font_color", Color("bcb0cc"))
 	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -246,8 +230,8 @@ func _create_dialogue_controls() -> void:
 
 	_counter = Label.new()
 	_counter.clip_text = true
-	_counter.position = Vector2(748, 367)
-	_counter.size = Vector2(164, 26)
+	_counter.position = Vector2(740, 333)
+	_counter.size = Vector2(172, 26)
 	_counter.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_counter.add_theme_font_size_override("font_size", 14)
 	_counter.add_theme_color_override("font_color", Color("d8b47d"))
@@ -255,24 +239,7 @@ func _create_dialogue_controls() -> void:
 	add_child(_counter)
 
 func _apply_button_style(button: Button, normal_color: Color, hover_color: Color, pressed_color: Color) -> void:
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = normal_color
-	normal.border_color = Color(0.72, 0.62, 0.82, 0.45)
-	normal.set_border_width_all(1)
-	normal.set_corner_radius_all(7)
-	normal.set_content_margin_all(7)
-	button.add_theme_stylebox_override("normal", normal)
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = hover_color
-	hover.border_color = Color("dfb8f2")
-	hover.set_border_width_all(2)
-	button.add_theme_stylebox_override("hover", hover)
-	var pressed := hover.duplicate() as StyleBoxFlat
-	pressed.bg_color = pressed_color
-	button.add_theme_stylebox_override("pressed", pressed)
-	var disabled := normal.duplicate() as StyleBoxFlat
-	disabled.bg_color = Color(0.18, 0.14, 0.24, 0.75)
-	button.add_theme_stylebox_override("disabled", disabled)
+	UIButtons.apply(button)
 
 func start(new_entries: Array, start_index: int = 0) -> void:
 	entries = new_entries.duplicate(true)
@@ -348,27 +315,27 @@ func _layout_current_line() -> void:
 		_counter.add_theme_font_size_override("font_size", 11)
 		_line_has_portraits = false
 		return
-	_speaker_label.position = Vector2(42, 367)
-	_speaker_label.size = Vector2(270, 38)
+	_speaker_label.position = Vector2(42, 332)
+	_speaker_label.size = Vector2(270, 34)
 	_speaker_label.add_theme_font_size_override("font_size", 20)
 	_speaker_label.add_theme_color_override("font_color", Color("ffe0a9"))
 	_speaker_label.add_theme_color_override("font_outline_color", Color(0.035, 0.018, 0.07, 0.98))
 	_speaker_label.add_theme_constant_override("outline_size", 5)
 	_speaker_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_text.position = Vector2(43, 414)
-	_text.size = Vector2(850, 57)
+	_text.position = Vector2(43, 380)
+	_text.size = Vector2(872, 78)
 	_text.add_theme_font_size_override("normal_font_size", 19)
 	_text.add_theme_font_size_override("bold_font_size", 19)
-	_choice_layer.position = Vector2(324, 164)
-	_choice_layer.size = Vector2(312, 174)
+	_choice_layer.position = Vector2(72, 414)
+	_choice_layer.size = Vector2(816, 98)
 	_choice_layer.add_theme_constant_override("separation", 7)
-	_continue.position = Vector2(705, 474)
-	_continue.size = Vector2(205, 32)
+	_continue.position = Vector2(716, 468)
+	_continue.size = Vector2(196, 38)
 	_hint.position = Vector2(44, 481)
-	_hint.size = Vector2(590, 24)
+	_hint.size = Vector2(630, 24)
 	_hint.add_theme_font_size_override("font_size", 13)
-	_counter.position = Vector2(748, 367)
-	_counter.size = Vector2(164, 26)
+	_counter.position = Vector2(740, 333)
+	_counter.size = Vector2(172, 26)
 	_counter.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_counter.add_theme_font_size_override("font_size", 14)
 
@@ -396,7 +363,7 @@ func advance() -> void:
 		_update_continue_text()
 		return
 	if not choice_buttons.is_empty():
-		_select_choice(choice_index)
+		# A choice is a decision, never an implicit continue action.
 		return
 	index = int(current_entry().get("next", index + 1))
 	if index >= entries.size():
@@ -430,10 +397,9 @@ func _select_choice(number: int) -> void:
 func handle_key(key: int) -> bool:
 	if not visible:
 		return false
-	if key in [KEY_E, KEY_ENTER, KEY_SPACE, KEY_KP_ENTER]:
-		advance()
-		return true
 	if not choice_buttons.is_empty():
+		if key in [KEY_SPACE, KEY_E]:
+			return true
 		if key in [KEY_UP, KEY_W]:
 			choice_index = posmod(choice_index - 1, choice_buttons.size())
 			_update_choice_focus()
@@ -447,6 +413,13 @@ func handle_key(key: int) -> bool:
 			if selected < choice_buttons.size():
 				_select_choice(selected)
 			return true
+		if key in [KEY_ENTER, KEY_KP_ENTER]:
+			_select_choice(choice_index)
+			return true
+		return false
+	if key in [KEY_E, KEY_ENTER, KEY_SPACE, KEY_KP_ENTER]:
+		advance()
+		return true
 	return false
 
 func _load_line() -> void:
@@ -460,13 +433,7 @@ func _load_line() -> void:
 	_speaker_label.text = speaker_name
 	_text.text = _compact_dialogue_text(str(entry.get("text", "")))
 	_layout_current_line()
-	# Keep longer early-story replies within the existing panel and portrait boundary.
-	var font_size := 15 if phone_chat_mode else 19
-	var minimum_font_size := 12 if phone_chat_mode else 15
-	while font_size > minimum_font_size and _theme_font.get_multiline_string_size(_text.get_parsed_text(), HORIZONTAL_ALIGNMENT_LEFT, _text.size.x, font_size).y > _text.size.y:
-		font_size -= 1
-	_text.add_theme_font_size_override("normal_font_size", font_size)
-	_text.add_theme_font_size_override("bold_font_size", font_size)
+	_fit_dialogue_text()
 	_text.visible_characters = 0
 	character_progress = 0.0
 	revealing = true
@@ -483,37 +450,114 @@ func _compact_dialogue_text(value: String) -> String:
 		compact = compact.replace("\n\n", "\n")
 	return compact
 
+func _fit_dialogue_text() -> void:
+	# Choice rows reduce the text area height after the line has loaded, so fit
+	# again whenever that layout changes, using the font and metrics actually rendered.
+	var font_size := 15 if phone_chat_mode else 19
+	var minimum_font_size := 9 if phone_chat_mode else 12
+	var dialogue_font: Font = _text.get_theme_font("normal_font")
+	while font_size > minimum_font_size:
+		_text.add_theme_font_size_override("normal_font_size", font_size)
+		_text.add_theme_font_size_override("bold_font_size", font_size)
+		var measured_height := dialogue_font.get_multiline_string_size(_text.get_parsed_text(), HORIZONTAL_ALIGNMENT_LEFT, _text.size.x, font_size).y
+		if measured_height <= _text.size.y and _text.get_content_height() <= _text.size.y:
+			break
+		font_size -= 1
+	_text.add_theme_font_size_override("normal_font_size", font_size)
+	_text.add_theme_font_size_override("bold_font_size", font_size)
+
 func _show_choices() -> void:
 	_clear_choices()
 	var choices: Array = current_entry().get("choices", [])
 	if choices.is_empty():
 		return
 	choice_index = 0
+	var choice_height := 48.0
+	var choice_separation := 4.0
+	if not phone_chat_mode:
+		if choices.size() >= 5:
+			_active_dialogue_rect = Rect2(18, 240, 924, 280)
+			_speaker_label.position = Vector2(42, 250)
+			_counter.position = Vector2(740, 251)
+			_hint.position = Vector2(326, 256)
+			_text.position = Vector2(43, 297)
+			_text.size = Vector2(872, 40)
+			_choice_layer.position = Vector2(72, 344)
+			_choice_layer.size = Vector2(816, 170)
+		elif choices.size() == 4:
+			_active_dialogue_rect = Rect2(18, 276, 924, 244)
+			_speaker_label.position = Vector2(42, 286)
+			_counter.position = Vector2(740, 287)
+			_hint.position = Vector2(326, 292)
+			_text.position = Vector2(43, 333)
+			_text.size = Vector2(872, 42)
+			_choice_layer.position = Vector2(72, 380)
+			_choice_layer.size = Vector2(816, 134)
+		else:
+			_text.position = Vector2(43, 380)
+			_text.size = Vector2(872, 42)
+			_choice_layer.position = Vector2(72, 422)
+			_choice_layer.size = Vector2(816, 88)
+			_hint.position = Vector2(326, 338)
+		if _active_dialogue_rect != PANEL_RECT:
+			_dialogue_window_layer.position = _active_dialogue_rect.position
+			_dialogue_window_layer.size = _active_dialogue_rect.size
+		_fit_dialogue_text()
+		choice_separation = 4.0
+	else:
+		choice_separation = 5.0
+	choice_height = maxf(1.0, (_choice_layer.size.y - choice_separation * (choices.size() - 1)) / choices.size())
 	for i in range(choices.size()):
 		var choice: Dictionary = choices[i]
 		var button := Button.new()
 		var choice_text := "%d. %s" % [i + 1, str(choice.get("text", "Ответить"))]
-		button.text = "" if phone_chat_mode else choice_text
-		button.custom_minimum_size = Vector2(276, 48) if phone_chat_mode else Vector2(312, 36 if choices.size() >= 4 else 39)
+		button.text = ""
+		button.position = Vector2(0, i * (choice_height + choice_separation))
+		button.size = Vector2(_choice_layer.size.x, choice_height)
+		button.custom_minimum_size = Vector2(_choice_layer.size.x, choice_height)
+		button.clip_contents = true
 		button.focus_mode = Control.FOCUS_NONE
 		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		button.add_theme_font_size_override("font_size", 13 if phone_chat_mode else 15)
-		_apply_button_style(button, Color(0.12, 0.09, 0.19, 0.96), Color(0.32, 0.22, 0.42, 0.98), Color(0.49, 0.32, 0.54, 1.0))
 		if phone_chat_mode:
-			var label := Label.new()
-			label.text = choice_text
-			label.position = Vector2(10, 4)
-			label.size = Vector2(256, 40)
-			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-			label.add_theme_font_size_override("font_size", 13)
-			label.add_theme_color_override("font_color", Color("f0eaf7"))
-			label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			button.add_child(label)
+			_apply_button_style(button, Color(0.12, 0.09, 0.19, 0.96), Color(0.32, 0.22, 0.42, 0.98), Color(0.49, 0.32, 0.54, 1.0))
+		else:
+			UIButtons.apply_choice(button)
+		var label := RichTextLabel.new()
+		label.text = choice_text
+		label.position = Vector2(10, 3) if phone_chat_mode else Vector2(14, 2)
+		label.size = Vector2(_choice_layer.size.x - 20, choice_height - 6) if phone_chat_mode else Vector2(_choice_layer.size.x - 28, choice_height - 4)
+		label.bbcode_enabled = false
+		label.fit_content = false
+		label.scroll_active = false
+		label.clip_contents = true
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		var label_font_size := 14
+		if phone_chat_mode:
+			var text_length := choice_text.length()
+			label_font_size = 13 if text_length <= 40 else (12 if text_length <= 58 else 11)
+			if choice_height < 40.0:
+				label_font_size = mini(label_font_size, 10)
+			# Long answers can wrap to three lines on the phone. Shrink only as
+			# much as needed so every rendered line fits inside its button.
+			while label_font_size > 9 and _theme_font.get_multiline_string_size(choice_text, HORIZONTAL_ALIGNMENT_CENTER, label.size.x, label_font_size).y > label.size.y - 2.0:
+				label_font_size -= 1
+			label.add_theme_font_size_override("normal_font_size", label_font_size)
+			label.add_theme_color_override("default_color", Color("f0eaf7"))
+		else:
+			label.add_theme_font_size_override("normal_font_size", label_font_size)
+			label.add_theme_color_override("default_color", Color("f0eaf7"))
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		button.add_child(label)
 		button.pressed.connect(_select_choice.bind(i))
 		_choice_layer.add_child(button)
 		choice_buttons.append(button)
+	if not phone_chat_mode:
+		_hint.size = Vector2(390, 22)
+		_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_hint.add_theme_font_size_override("font_size", 11)
 	_update_choice_focus()
 	_hint.text = "↑ / ↓ или 1–%d — выбрать · Enter — ответить" % choices.size()
 
@@ -521,6 +565,15 @@ func _clear_choices() -> void:
 	for child in _choice_layer.get_children():
 		child.queue_free()
 	choice_buttons.clear()
+	if is_instance_valid(_dialogue_window_layer) and _active_dialogue_rect != PANEL_RECT:
+		_active_dialogue_rect = PANEL_RECT
+		_dialogue_window_layer.position = PANEL_RECT.position
+		_dialogue_window_layer.size = PANEL_RECT.size
+		_speaker_label.position = Vector2(42, 332)
+		_counter.position = Vector2(740, 333)
+		_hint.position = Vector2(326, 338)
+		_text.position = Vector2(43, 380)
+		_text.size = Vector2(872, 78)
 
 func _update_choice_focus() -> void:
 	for i in range(choice_buttons.size()):
@@ -640,7 +693,7 @@ func _display_name(speaker_id: String) -> String:
 
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var active_rect := PHONE_RECT if phone_chat_mode else PANEL_RECT
+		var active_rect := PHONE_RECT if phone_chat_mode else _active_dialogue_rect
 		if not active_rect.has_point(event.position) and choice_buttons.is_empty():
 			advance()
 			accept_event()

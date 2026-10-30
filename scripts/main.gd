@@ -1,5 +1,7 @@
 extends Node2D
 
+const UIButtons = preload("res://scripts/ui_buttons.gd")
+
 const ROOM := Rect2(120, 70, 720, 390)
 const PLAYER_SPEED := 155.0
 const TILE := 24
@@ -75,7 +77,7 @@ func _build_ui() -> void:
 	hint_label.add_theme_color_override("font_color", Color("#d5c6f4"))
 	ui_layer.add_child(hint_label)
 
-	dialogue_panel = _make_panel(Vector2(110, 335), Vector2(740, 145), Color("#100d20"), Color("#b88cff"))
+	dialogue_panel = _make_panel(Vector2(110, 335), Vector2(740, 145), Color("#100d20"), Color("#b88cff"), true)
 	dialogue_panel.visible = false
 	ui_layer.add_child(dialogue_panel)
 	dialogue_label = RichTextLabel.new()
@@ -95,6 +97,7 @@ func _build_ui() -> void:
 	dialogue_panel.add_child(choices_box)
 
 	computer_panel = _make_panel(Vector2(100, 58), Vector2(760, 420), Color("#121125"), Color("#8b78d8"))
+	UIButtons.apply_menu_panel(computer_panel)
 	computer_panel.visible = false
 	ui_layer.add_child(computer_panel)
 	var comp_title := Label.new()
@@ -104,6 +107,7 @@ func _build_ui() -> void:
 	comp_title.add_theme_color_override("font_color", Color("#f1eaff"))
 	computer_panel.add_child(comp_title)
 	var close_button := Button.new()
+	UIButtons.apply_menu_button(close_button)
 	close_button.text = "Закрыть ✕"
 	close_button.position = Vector2(615, 8)
 	close_button.size = Vector2(120, 32)
@@ -137,29 +141,35 @@ func _build_ui() -> void:
 	computer_panel.add_child(comp_footer)
 
 	app_panel = _make_panel(Vector2(180, 110), Vector2(600, 315), Color("#17132b"), Color("#a88be8"))
+	UIButtons.apply_menu_panel(app_panel)
 	app_panel.visible = false
 	ui_layer.add_child(app_panel)
 
 	inventory_panel = _make_panel(Vector2(220, 150), Vector2(520, 220), Color("#17132b"), Color("#a88be8"))
+	UIButtons.apply_menu_panel(inventory_panel)
 	inventory_panel.visible = false
 	ui_layer.add_child(inventory_panel)
 
-func _make_panel(pos: Vector2, size: Vector2, bg: Color, border: Color) -> Panel:
+func _make_panel(pos: Vector2, size: Vector2, bg: Color, border: Color, keep_dialog_style: bool = false) -> Panel:
 	var panel := Panel.new()
 	panel.position = pos
 	panel.size = size
-	var style := StyleBoxFlat.new()
-	style.bg_color = bg
-	style.border_color = border
-	style.set_border_width_all(3)
-	style.set_corner_radius_all(5)
-	panel.add_theme_stylebox_override("panel", style)
+	if keep_dialog_style:
+		var style := StyleBoxFlat.new()
+		style.bg_color = bg
+		style.border_color = border
+		style.set_border_width_all(3)
+		style.set_corner_radius_all(5)
+		panel.add_theme_stylebox_override("panel", style)
+	else:
+		UIButtons.apply_menu_panel(panel)
 	return panel
 
 func _add_app_button(parent: GridContainer, button_text: String, app_id: String, caption: String) -> void:
 	var wrap := VBoxContainer.new()
 	wrap.custom_minimum_size = Vector2(218, 86)
 	var b := Button.new()
+	UIButtons.apply_menu_button(b)
 	b.text = button_text
 	b.custom_minimum_size = Vector2(218, 54)
 	b.add_theme_font_size_override("font_size", 17)
@@ -281,6 +291,7 @@ func _open_app(id: String) -> void:
 	title.add_theme_color_override("font_color", Color("#f1eaff"))
 	app_panel.add_child(title)
 	var close := Button.new()
+	UIButtons.apply_menu_button(close)
 	close.text = "Назад"
 	close.position = Vector2(500, 8)
 	close.size = Vector2(80, 30)
@@ -336,6 +347,7 @@ func _build_notepad() -> void:
 	app_panel.add_child(notepad_content_label)
 
 	notepad_prev_button = Button.new()
+	UIButtons.apply_menu_button(notepad_prev_button)
 	notepad_prev_button.text = "‹ Предыдущая"
 	notepad_prev_button.position = Vector2(18, 164)
 	notepad_prev_button.size = Vector2(150, 32)
@@ -350,6 +362,7 @@ func _build_notepad() -> void:
 	app_panel.add_child(notepad_page_label)
 
 	notepad_next_button = Button.new()
+	UIButtons.apply_menu_button(notepad_next_button)
 	notepad_next_button.text = "Следующая ›"
 	notepad_next_button.position = Vector2(428, 164)
 	notepad_next_button.size = Vector2(150, 32)
@@ -357,6 +370,7 @@ func _build_notepad() -> void:
 	app_panel.add_child(notepad_next_button)
 
 	var add_grok := Button.new()
+	UIButtons.apply_menu_button(add_grok)
 	add_grok.text = "Добавить заметку «Grok красивая»"
 	add_grok.position = Vector2(18, 210)
 	add_grok.size = Vector2(560, 34)
@@ -364,6 +378,7 @@ func _build_notepad() -> void:
 	app_panel.add_child(add_grok)
 
 	var add_chat := Button.new()
+	UIButtons.apply_menu_button(add_chat)
 	add_chat.text = "Добавить заметку «ChatGPT тоже красивая»"
 	add_chat.position = Vector2(18, 251)
 	add_chat.size = Vector2(560, 34)
@@ -415,6 +430,7 @@ func _make_app_body(speaker: String, body: String, choices: Array) -> void:
 	var y := 190
 	for item in choices:
 		var b := Button.new()
+		UIButtons.apply_menu_button(b)
 		b.text = item[0]
 		b.position = Vector2(18, y)
 		b.size = Vector2(560, 34)
@@ -491,6 +507,7 @@ func _toggle_inventory() -> void:
 		content.add_theme_color_override("font_color", Color("#e7ddfa"))
 		inventory_panel.add_child(content)
 		var close := Button.new()
+		UIButtons.apply_menu_button(close)
 		close.text = "Закрыть (I / Esc)"
 		close.position = Vector2(18, 170)
 		close.size = Vector2(180, 30)
@@ -513,6 +530,7 @@ func _display_current_line() -> void:
 		return
 	dialogue_label.text = "[color=#c49aff]" + current_lines[dialogue_index] + "[/color]"
 	var next := Button.new()
+	UIButtons.apply(next)
 	next.text = "Продолжить  ›"
 	next.custom_minimum_size = Vector2(160, 30)
 	next.pressed.connect(_advance_dialogue)

@@ -15,6 +15,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="Типочек: Ключ"
+config/version="0.9.0-beta.2"
 config/description="Top-down pixel-art adventure prototype with an in-game computer."
 run/main_scene="res://MainMenu.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
@@ -35,6 +36,7 @@ window/size/window_height_override=720
 window/stretch/mode="canvas_items"
 
 [gui]
+
 theme/custom_font="res://assets/ui/fonts/Rubik-Variable.ttf"
 
 [input]

@@ -1,10 +1,14 @@
 extends Control
 
+const UIButtons = preload("res://scripts/ui_buttons.gd")
+const MenuConfirm = preload("res://scripts/menu_confirm_dialog.gd")
+
 var game: Node
 var menu_panel: Panel
 var settings_panel: Panel
 var status_label: Label
-var leave_confirmation: ConfirmationDialog
+var leave_confirmation: Control
+var exit_confirmation: Control
 var game_hud_visibility: Dictionary = {}
 
 func _ready() -> void:
@@ -28,12 +32,7 @@ func _build() -> void:
 	menu_panel.z_index = 1
 	menu_panel.position = Vector2(300, 54)
 	menu_panel.size = Vector2(360, 432)
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color("171322")
-	style.border_color = Color("9b82b4")
-	style.set_border_width_all(3)
-	style.set_corner_radius_all(7)
-	menu_panel.add_theme_stylebox_override("panel", style)
+	UIButtons.apply_menu_panel(menu_panel)
 	add_child(menu_panel)
 	var title := Label.new()
 	title.text = "ПАУЗА"
@@ -47,7 +46,7 @@ func _build() -> void:
 	_pause_button("Настройки", 126, _open_settings)
 	_pause_button("Сохранить игру", 177, _save_game)
 	_pause_button("Главное меню", 228, _main_menu_pressed)
-	_pause_button("Выйти из игры", 279, func(): get_tree().quit())
+	_pause_button("Выйти из игры", 279, _exit_pressed)
 	status_label = Label.new()
 	status_label.position = Vector2(30, 337)
 	status_label.size = Vector2(300, 62)
@@ -60,17 +59,25 @@ func _build() -> void:
 	settings_panel.z_index = 2
 	add_child(settings_panel)
 	settings_panel.closed.connect(_close_settings)
-	leave_confirmation = ConfirmationDialog.new()
+	leave_confirmation = MenuConfirm.new()
 	leave_confirmation.title = "Вернуться в главное меню?"
 	leave_confirmation.dialog_text = "Есть несохранённые изменения. Выйти без сохранения?"
 	leave_confirmation.ok_button_text = "Выйти без сохранения"
 	leave_confirmation.cancel_button_text = "Отмена"
 	leave_confirmation.confirmed.connect(_return_to_main_menu)
 	add_child(leave_confirmation)
+	exit_confirmation = MenuConfirm.new()
+	exit_confirmation.title = "Выйти из игры?"
+	exit_confirmation.dialog_text = "Несохранённый прогресс может быть потерян."
+	exit_confirmation.ok_button_text = "Выйти"
+	exit_confirmation.cancel_button_text = "Остаться"
+	exit_confirmation.confirmed.connect(func(): get_tree().quit())
+	add_child(exit_confirmation)
 
 func _pause_button(text: String, y: float, action: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
+	UIButtons.apply_menu_button(button)
 	button.position = Vector2(30, y)
 	button.size = Vector2(300, 40)
 	button.add_theme_font_size_override("font_size", 17)
@@ -135,6 +142,9 @@ func _main_menu_pressed() -> void:
 	else:
 		_return_to_main_menu()
 
+func _exit_pressed() -> void:
+	exit_confirmation.popup_centered()
+
 func _return_to_main_menu() -> void:
 	_set_game_hud_visible(true)
 	get_tree().paused = false
@@ -148,6 +158,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if leave_confirmation.visible:
 		leave_confirmation.hide()
+	elif exit_confirmation.visible:
+		exit_confirmation.hide()
 	elif settings_panel.visible:
 		_close_settings()
 	else:

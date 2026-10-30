@@ -1,4 +1,5 @@
 extends Control
+const MiniGameStyle = preload("res://scripts/minigame_skin.gd")
 
 signal checkpoint_changed(data: Dictionary)
 signal finished(result: Dictionary)
@@ -80,6 +81,7 @@ func _ready() -> void:
 	_build_result()
 	_build_tutorial()
 	_render()
+	MiniGameStyle.apply(self, Color("2b2027"), Color("a17b59"), Color("f3d7ab"))
 
 func open(snapshot: Dictionary = {}) -> void:
 	if snapshot.is_empty(): state.reset()

@@ -1,5 +1,7 @@
 extends Node
 
+signal achievement_sound_started(achievement_id: String, is_secret: bool, stream_path: String)
+
 const MUSIC_PATHS := {
 	"menu": "res://assets/audio/main_menu.ogg",
 	"room": "res://assets/audio/room.ogg",
@@ -17,6 +19,10 @@ const CALL_SFX_PATHS := {
 	"call_tables": "res://assets/audio/call_mllf_table.ogg",
 	"call_palych": "res://assets/audio/call_palich_wb.ogg"
 }
+const ACHIEVEMENT_SFX_PATHS := {
+	"normal": "res://assets/audio/achievement.ogg",
+	"secret": "res://assets/audio/achievement_rare.ogg"
+}
 const SILENCE_DB := -80.0
 
 @export_range(0.0, 5.0, 0.05) var default_fade_duration := 1.0
@@ -25,7 +31,7 @@ const SILENCE_DB := -80.0
 # These are source-level corrections; the user's SFX slider still applies once
 # on the SFX bus after this compensation.
 @export_range(-24.0, 24.0, 0.5) var walk_volume_db := 16.0
-@export_range(-24.0, 24.0, 0.5) var pc_volume_db := 18.0
+@export_range(-24.0, 24.0, 0.5) var pc_volume_db := 12.0
 
 var _music_players: Array[AudioStreamPlayer] = []
 var _active_music: AudioStreamPlayer
@@ -34,6 +40,7 @@ var _fade_tween: Tween
 var _walk_player: AudioStreamPlayer
 var _pc_player: AudioStreamPlayer
 var _call_sfx_player: AudioStreamPlayer
+var _achievement_sfx_player: AudioStreamPlayer
 var _music_ducked_for_call := false
 
 func _ready() -> void:
@@ -65,6 +72,11 @@ func _ready() -> void:
 	_call_sfx_player.volume_db = 0.0
 	_call_sfx_player.finished.connect(_restore_music_after_call)
 	add_child(_call_sfx_player)
+	_achievement_sfx_player = AudioStreamPlayer.new()
+	_achievement_sfx_player.name = "AchievementSFX"
+	_achievement_sfx_player.bus = &"SFX"
+	_achievement_sfx_player.volume_db = 0.0
+	add_child(_achievement_sfx_player)
 
 func _ensure_bus(bus_name: String) -> void:
 	if AudioServer.get_bus_index(bus_name) >= 0:
@@ -176,6 +188,20 @@ func play_call_sfx(event_id: String) -> void:
 		if player.playing:
 			_fade_tween.tween_property(player, "volume_db", SILENCE_DB, 0.18)
 	_call_sfx_player.play()
+
+func play_achievement_sfx(is_secret: bool, achievement_id: String = "") -> void:
+	if _achievement_sfx_player == null:
+		return
+	var key := "secret" if is_secret else "normal"
+	var path := str(ACHIEVEMENT_SFX_PATHS[key])
+	var stream := load(path) as AudioStream
+	if stream == null:
+		push_warning("Achievement sound is missing: " + path)
+		return
+	_achievement_sfx_player.stop()
+	_achievement_sfx_player.stream = stream
+	_achievement_sfx_player.play()
+	achievement_sound_started.emit(achievement_id, is_secret, path)
 
 func _restore_music_after_call() -> void:
 	if not _music_ducked_for_call:

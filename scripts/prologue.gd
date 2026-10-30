@@ -48,10 +48,12 @@ var save_dirty := false
 var saved_player_position := Vector2.ZERO
 const SPAWN_POSITION := Vector2(450,340)
 const Early = preload("res://scripts/early_content.gd")
+const DoodleJump = preload("res://scripts/doodle_jump.gd")
 var story = preload("res://scripts/story_state.gd").new()
 var minigame_checkpoint: Dictionary = {}
 var dialogue_resume: Dictionary = {}
 var tab_war: Control
+var doodle_jump_control: Control
 var office_queue: Control
 var court_trial: Control
 var digital_archaeology: Control
@@ -132,6 +134,20 @@ func _ready() -> void:
 	if not dev_call_event.is_empty():
 		_start_dev_call_event(dev_call_event)
 		return
+	var dev_minigame := SaveManager.consume_dev_minigame()
+	if not dev_minigame.is_empty():
+		_start_dev_minigame(dev_minigame)
+		return
+	if SaveManager.consume_dev_credits():
+		_reset_progress()
+		intro_seen = true
+		step = Step.COMPLETE
+		show_credits()
+		return
+	var dev_ending := SaveManager.consume_dev_ending()
+	if not dev_ending.is_empty():
+		_start_dev_ending(dev_ending)
+		return
 	var dev_chapter := SaveManager.consume_dev_chapter()
 	if dev_chapter > 0:
 		_start_dev_chapter(dev_chapter)
@@ -195,6 +211,30 @@ func _start_dev_chapter(chapter: int) -> void:
 		6: start_chapter_six()
 		7: start_chapter_seven()
 
+func _start_dev_minigame(game_id: String) -> void:
+	# Give each test run a disposable state and keep normal saves untouched.
+	_reset_progress()
+	intro_seen = true
+	step = Step.COMPLETE
+	chapter_one_stage = 2
+	chapter_two_complete = true
+	match game_id:
+		"tab_war": start_tab_war()
+		"wire_puzzle": start_last_build()
+		"digital_archaeology": start_digital_archaeology()
+		"office_queue": start_office_queue()
+		"court_trial": start_court_trial()
+
+func _start_dev_ending(ending_id: String) -> void:
+	# Direct previews use disposable story data and must not unlock achievements.
+	_reset_progress()
+	intro_seen = true
+	step = Step.COMPLETE
+	story.set_value("chapter_seven_complete", true)
+	story.set_value("final_ending", ending_id)
+	story.decisions["ending_achievement_" + ending_id] = ending_id
+	show_chapter_seven_ending()
+
 func install_character() -> void:
 	for child in player.get_children():
 		if child is Polygon2D and child.name != "PlayerShadow":
@@ -251,14 +291,7 @@ func button_at(parent: Node, text: String, pos: Vector2, area: Vector2, action: 
 	b.focus_mode = Control.FOCUS_NONE
 	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	b.add_theme_font_size_override("font_size", 16)
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color("39314f")
-	style.set_corner_radius_all(5)
-	style.set_content_margin_all(8)
-	b.add_theme_stylebox_override("normal", style)
-	var hover := style.duplicate() as StyleBoxFlat
-	hover.bg_color = Color("68537b")
-	b.add_theme_stylebox_override("hover", hover)
+	UIButtons.apply(b)
 	var label := Label.new()
 	label.text = text
 	label.position = Vector2(8, 3)
@@ -296,6 +329,7 @@ func _build_ui() -> void:
 	ui_layer = CanvasLayer.new()
 	add_child(ui_layer)
 	hint_panel = _make_panel(Vector2(18,12),Vector2(226,132),Color(0.045,0.035,0.075,0.94),Color("77628d"))
+	UIButtons.apply_menu_panel(hint_panel)
 	hint_panel.name = "PrologueControlsHint"
 	ui_layer.add_child(hint_panel)
 	text_at(hint_panel,"УПРАВЛЕНИЕ",Vector2(10,7),Vector2(206,20),12,Color("e4d2f2"))
@@ -304,6 +338,15 @@ func _build_ui() -> void:
 	controls_list_label.modulate.a = 0.58
 	task_panel = _make_panel(Vector2(18,154),Vector2(226,106),Color(0.045,0.035,0.075,0.94),Color("77628d"))
 	task_panel.name = "CurrentTaskPanel"
+	var task_style := StyleBoxFlat.new()
+	task_style.bg_color = Color(0.035, 0.027, 0.058, 0.48)
+	task_style.set_border_width_all(0)
+	task_style.set_corner_radius_all(8)
+	task_style.content_margin_left = 8
+	task_style.content_margin_right = 8
+	task_style.content_margin_top = 6
+	task_style.content_margin_bottom = 6
+	task_panel.add_theme_stylebox_override("panel", task_style)
 	ui_layer.add_child(task_panel)
 	text_at(task_panel,"ТЕКУЩАЯ ЗАДАЧА",Vector2(10,7),Vector2(206,19),11,Color("e4d2f2"))
 	hint_label = text_at(ui_layer,"",Vector2(150,484),Vector2(660,24),12,Color("d5c6f4"))
@@ -322,10 +365,13 @@ func _build_ui() -> void:
 	goal_label = text_at(task_panel,"",Vector2(10,29),Vector2(206,68),12,Color("ddc396"))
 	goal_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	computer_panel = _make_panel(Vector2(100,68),Vector2(760,405),Color("171322"),Color("706180"))
+	UIButtons.apply_menu_panel(computer_panel)
 	ui_layer.add_child(computer_panel)
 	app_panel = _make_panel(Vector2(100,68),Vector2(760,405),Color("191524"),Color("8e78a7"))
+	UIButtons.apply_menu_panel(app_panel)
 	ui_layer.add_child(app_panel)
 	inventory_panel = _make_panel(Vector2(200,120),Vector2(560,300),Color("191524"),Color("8e78a7"))
+	UIButtons.apply_menu_panel(inventory_panel)
 	ui_layer.add_child(inventory_panel)
 	phone_panel = Panel.new()
 	phone_panel.name = "FriendsChatPhone"
@@ -337,7 +383,7 @@ func _build_ui() -> void:
 	phone_style.border_color = Color("88739a")
 	phone_style.set_border_width_all(3)
 	phone_style.set_corner_radius_all(22)
-	phone_panel.add_theme_stylebox_override("panel",phone_style)
+	phone_panel.add_theme_stylebox_override("panel", phone_style)
 	ui_layer.add_child(phone_panel)
 	dialogue_panel = _make_panel(Vector2(100,310),Vector2(760,190),Color("100d1e"),Color("bba0cf"))
 	ui_layer.add_child(dialogue_panel)
@@ -426,6 +472,7 @@ func _show_polaroid_easter_egg() -> void:
 
 func _build_notebook_hint() -> Panel:
 	var panel := _make_panel(Vector2(880,10),Vector2(64,64),Color(0.045,0.035,0.075,0.97),Color("8e75a5"))
+	UIButtons.apply_menu_panel(panel)
 	panel.name = "NotebookTabHint"
 	var cover := ColorRect.new()
 	cover.position = Vector2(15,7)
@@ -573,7 +620,7 @@ func _on_achievement_dialogue_choice(choice_id: String) -> void:
 		if not c6_flags.is_empty():
 			story.decide("chapter_six_resolution",choice_id,{"affection_artbay":1 if choice_id == "c6_contract" else 0},c6_flags)
 	if flow.begins_with("chapter_seven_outro"):
-		var ending_id := "neutral"
+		var ending_id := ""
 		match choice_id:
 			"c7_grok": ending_id = "grok" if story.get_value("grok_date_completed") and story.get_value("grok_without_key") else "neutral"
 			"c7_jbt": ending_id = "jbt" if story.get_value("gpt_boundaries") else "neutral"
@@ -584,9 +631,10 @@ func _on_achievement_dialogue_choice(choice_id: String) -> void:
 			"c7_ministry": ending_id = "ministry" if story.get_value("secret_protocol") and (story.get_value("stamp_obtained") or story.get_value("stamp_stolen")) else "neutral"
 			"c7_triple": ending_id = "triple" if story.get_value("defused_tab_war") and int(story.get_value("affection_grok",0)) >= 2 and int(story.get_value("affection_gpt",0)) >= 2 and int(story.get_value("affection_artbay",0)) >= 2 else "neutral"
 			"c7_solo": ending_id = "neutral"
-		story.set_value("final_ending",ending_id)
-		story.decide("final_choice",choice_id)
-		if choice_id == "c7_solo": story.set_value("honest_final_choice",true)
+		if ending_id != "":
+			story.set_value("final_ending",ending_id)
+			story.decide("final_choice",choice_id)
+			if choice_id == "c7_solo": story.set_value("honest_final_choice",true)
 	if choice_id != "":
 		AchievementManager.unlock_achievement("first_choice")
 		Early.on_choice(self, choice_id)
@@ -888,7 +936,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		if key == KEY_ESCAPE:
 			show_chapter_seven_ending()
 		elif key in [KEY_ENTER,KEY_KP_ENTER,KEY_SPACE]:
-			_finish_credits_roll()
+			if credits_roll != null and credits_roll.is_valid():
+				credits_roll.set_speed_scale(3.0)
 		get_viewport().set_input_as_handled()
 		return
 	if dialogue_open:
@@ -1407,7 +1456,9 @@ func show_desktop() -> void:
 	taskbar.color=Color(0.055,0.045,0.09,0.94)
 	taskbar.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	computer_panel.add_child(taskbar)
-	button_at(computer_panel,"Пуск",Vector2(13,355),Vector2(77,36),show_menu)
+	var start_button := button_at(computer_panel,"Пуск",Vector2(13,355),Vector2(77,36),show_doodle_jump)
+	start_button.name = "StartButton"
+	start_button.tooltip_text = "Запустить мини-игру «Прыжки Грата»"
 	text_at(computer_panel,"СЕЙЧАС: "+goal_label.text,Vector2(106,355),Vector2(544,40),13,Color("d7c6b1"))
 	text_at(computer_panel,"03:47",Vector2(682,360),Vector2(65,25),17)
 	_show_hint("Мышь — выбрать приложение · Esc — выйти из компьютера")
@@ -1513,17 +1564,53 @@ func _open_app(id: String) -> void:
 			else:
 				show_info("Поиск", "Введите название файла или приложения.", "key.glb не найден.")
 		"grok":
-			if step==Step.GROK:
-				begin_flow("grok")
-			elif story.get_value("grok_date_completed"):
-				if active_chapter == 3:
-					if story.get_value("chapter_three_complete"): show_chapter_three_ending()
-					else: start_chapter_three()
-				else: show_chapter_two_ending()
-			elif step==Step.COMPLETE:
-				show_ending()
+			_open_grok_app()
+
+func _open_grok_app() -> void:
+	# A completed Grok route is global story state; it must never route a later
+	# chapter back to the Chapter 2 checkpoint.
+	if active_chapter == 0:
+		if step == Step.GROK:
+			begin_flow("grok")
+		elif step == Step.COMPLETE:
+			show_ending()
+		else:
+			show_info("Новая вкладка", "Грат: «Сначала сам попробую.\nНу, с ЖБТ. Но это считается».", "До Грок ещё дойдём.")
+		return
+	match active_chapter:
+		1:
+			if chapter_one_stage >= 2:
+				show_chapter_one_checkpoint()
 			else:
-				show_info("Новая вкладка", "Грат: «Сначала сам попробую.\nНу, с ЖБТ. Но это считается».", "До Грок ещё дойдём.")
+				show_info("Грок · сообщения", "Переписка с Грок сохранена. Сейчас Грат разбирается с уликами в своей комнате.", "Текущая глава не сброшена · Назад — к рабочему столу.")
+		2:
+			if chapter_two_complete:
+				show_chapter_two_ending()
+			else:
+				show_info("Грок · история BIOS", "Свидание и получение key.txt уже записаны в истории. Сначала закончи оставшиеся дела главы.", "Текущая глава не сброшена · Назад — к рабочему столу.")
+		3:
+			if story.get_value("chapter_three_complete"):
+				show_chapter_three_ending()
+			else:
+				_show_grok_archive_for_chapter(3)
+		_:
+			_show_grok_archive_for_chapter(active_chapter)
+
+func _show_grok_archive_for_chapter(chapter: int) -> void:
+	show_info("Грок · архив переписки", "Последние сообщения сохранены. Сейчас открыта глава %d; возвращаться к старому маршруту не нужно." % chapter, "Текущая глава остаётся активной · Назад — к рабочему столу.")
+
+func show_doodle_jump() -> void:
+	AchievementManager.unlock_achievement("doodle_jump_found")
+	app_header("ПУСК · ПРЫЖКИ ГРАТА")
+	mode = "doodle_jump"
+	text_at(app_panel, "A / D или ← / → — двигаться · Esc — назад", Vector2(27, 55), Vector2(690, 24), 12, Color("c3abd7"))
+	doodle_jump_control = DoodleJump.new()
+	doodle_jump_control.name = "DoodleJumpMinigame"
+	doodle_jump_control.position = Vector2(25, 82)
+	doodle_jump_control.size = Vector2(710, 295)
+	doodle_jump_control.focus_mode = Control.FOCUS_ALL
+	app_panel.add_child(doodle_jump_control)
+	doodle_jump_control.grab_focus()
 
 func app_header(title: String) -> void:
 	mode="app"
@@ -1719,9 +1806,9 @@ func show_ending() -> void:
 			child.hide()
 	text_at(app_panel,"Творческий директор",Vector2(30,92),Vector2(690,55),32)
 	text_at(app_panel,"Сделано ключей: 0\nКонсультаций с ЖБТ: 3\nУверенность в собственных силах: непоколебимая.",Vector2(30,171),Vector2(690,114),20)
-	text_at(app_panel,"Grok печатает…\nПродолжение следует.",Vector2(30,298),Vector2(430,72),18,Color("d8b29f"))
-	button_at(app_panel,"В комнату",Vector2(532,324),Vector2(195,42),_close_computer)
-	button_at(app_panel,"Глава 1 →",Vector2(30,324),Vector2(260,42),start_chapter_one)
+	text_at(app_panel,"Grok печатает…\nПродолжение следует.",Vector2(30,290),Vector2(460,44),18,Color("d8b29f"))
+	button_at(app_panel,"В комнату",Vector2(532,350),Vector2(195,42),_close_computer)
+	button_at(app_panel,"Глава 1 →",Vector2(30,350),Vector2(260,42),start_chapter_one)
 
 func start_chapter_one() -> void:
 	_set_active_chapter(1)
@@ -2090,9 +2177,45 @@ func show_chapter_seven_ending() -> void:
 	mode = "ending"
 	AudioManager.play_music("room")
 	var ending_id := str(story.get_value("final_ending","neutral"))
-	text_at(app_panel,"ПОСЛЕДНЯЯ СБОРКА",Vector2(30,90),Vector2(690,48),27)
-	_multiline_text_at(app_panel,preload("res://scripts/chapter_seven.gd").ending_text(ending_id,story.values),Vector2(30,155),Vector2(690,135),16,Color("d7c6df"))
-	text_at(app_panel,"Финал: " + ending_id.to_upper() + " · Поворотов узлов: %d" % int(story.get_value("last_build_turns",0)),Vector2(30,300),Vector2(690,34),15,Color("e2c791"))
+	var illustration_names := {
+		"grok":"grok",
+		"jbt":"jbt",
+		"artbay":"artrey",
+		"artbay_bad":"artrey_bad",
+		"team":"team",
+		"ministry":"ministry",
+		"triple":"triple",
+		"instrumental":"instrumental",
+		"neutral":"solo"
+	}
+	var illustration_name := str(illustration_names.get(ending_id,"solo"))
+	var illustration := load("res://assets/ui/endings/%s.png" % illustration_name) as Texture2D
+	if illustration:
+		var illustration_frame := Panel.new()
+		illustration_frame.name = "EndingIllustrationFrame"
+		illustration_frame.position = Vector2(426,82)
+		illustration_frame.size = Vector2(308,198)
+		illustration_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var frame_style := StyleBoxFlat.new()
+		frame_style.bg_color = Color("100d18")
+		frame_style.border_color = Color("8e78a7")
+		frame_style.set_border_width_all(2)
+		frame_style.set_corner_radius_all(8)
+		illustration_frame.add_theme_stylebox_override("panel",frame_style)
+		app_panel.add_child(illustration_frame)
+		var illustration_view := TextureRect.new()
+		illustration_view.name = "EndingIllustration"
+		illustration_view.position = Vector2(4,4)
+		illustration_view.size = Vector2(300,190)
+		illustration_view.texture = illustration
+		illustration_view.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		illustration_view.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		illustration_view.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		illustration_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		illustration_frame.add_child(illustration_view)
+	text_at(app_panel,"ПОСЛЕДНЯЯ СБОРКА",Vector2(30,90),Vector2(380,48),27)
+	_multiline_text_at(app_panel,preload("res://scripts/chapter_seven.gd").ending_text(ending_id,story.values),Vector2(30,155),Vector2(380,135),16,Color("d7c6df"))
+	text_at(app_panel,"Финал: " + preload("res://scripts/chapter_seven.gd").ending_title(ending_id) + " · Поворотов узлов: %d" % int(story.get_value("last_build_turns",0)),Vector2(30,300),Vector2(690,34),15,Color("e2c791"))
 	_add_ending_actions([
 		{"text":"В комнату","callback":_close_computer},
 		{"text":"Переиграть финал","callback":func():
@@ -2152,7 +2275,7 @@ func show_credits() -> void:
 	credits_roll = credits_screen.create_tween()
 	credits_roll.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	credits_roll.set_trans(Tween.TRANS_LINEAR)
-	credits_roll.tween_property(credits_label,"position",Vector2(90,-credits_label.size.y),42.0)
+	credits_roll.tween_property(credits_label,"position",Vector2(90,-credits_label.size.y),11.333333)
 	credits_roll.finished.connect(_reveal_credits_buttons)
 
 func _reveal_credits_buttons() -> void:

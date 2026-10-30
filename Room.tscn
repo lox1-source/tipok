@@ -11,7 +11,6 @@
 [ext_resource type="Script" uid="uid://b447n2c3d6che" path="res://scripts/player_shadow.gd" id="player_shadow"]
 [ext_resource type="Texture2D" uid="uid://bgoohjqepadwa" path="res://assets/sprites/furniture/poshalka.png" id="polaroid_photo"]
 [ext_resource type="Texture2D" uid="uid://dtqg05nv4m0gi" path="res://assets/sprites/furniture/poster.png" id="poster"]
-[ext_resource type="Texture2D" uid="uid://bufvu33uyotb4" path="res://assets/sprites/furniture/room_drafts.png" id="room_drafts"]
 [ext_resource type="Texture2D" uid="uid://cywn4ov6unjcs" path="res://assets/sprites/furniture/room_plant.png" id="room_plant"]
 [ext_resource type="Texture2D" uid="uid://ebqhmywi5yvc" path="res://assets/sprites/furniture/side-table.png" id="side_table"]
 [ext_resource type="Texture2D" uid="uid://b3x0gc5110kyh" path="res://assets/sprites/furniture/wardrobe-sheet.png" id="wardrobe"]
@@ -320,14 +319,6 @@ visible = false
 position = Vector2(0, -47)
 scale = Vector2(0.4, 0.4)
 texture = ExtResource("env_nightstand")
-
-[node name="Drafts" type="Sprite2D" parent="Nightstand" unique_id=41854130 groups=["interactable"]]
-visible = false
-texture_filter = 1
-position = Vector2(103, -141)
-scale = Vector2(0.3, 0.3)
-texture = ExtResource("room_drafts")
-metadata/object_id = "drafts"
 
 [node name="Polaroid" type="Sprite2D" parent="Nightstand" unique_id=931000584 groups=["interactable"]]
 visible = false

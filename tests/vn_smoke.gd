@@ -28,6 +28,10 @@ func run() -> void:
 	# Reveal and enter the choice line. The two options must stay separate.
 	dialogue.advance()
 	check(dialogue.choice_buttons.size() == 2, "Choice buttons appear after text reveal")
+	dialogue.handle_key(KEY_SPACE)
+	check(dialogue.choice_buttons.size() == 2 and dialogue.index == first_index + 1, "Space cannot silently answer a dialogue choice")
+	dialogue.advance()
+	check(dialogue.choice_buttons.size() == 2 and dialogue.index == first_index + 1, "Continue input cannot bypass an unanswered choice")
 	dialogue.select_choice(0)
 	check(dialogue.index == 2, "First branch lands on its declared next entry")
 	# Every approved character has seven emotions and two explicit directions.
@@ -48,8 +52,37 @@ func run() -> void:
 	game._start_dialogue_entries(phone_entries, 1)
 	check(dialogue.phone_chat_mode and not dialogue._dialogue_window_layer.visible, "Artrey phone mode hides the ordinary VN panel")
 	check(dialogue._silhouette_shadows["left"].texture == null and dialogue._silhouette_shadows["right"].texture == null, "Phone mode has no leftover portrait silhouettes")
+	dialogue.start([{"speaker_id":"grat", "speaker":"Грат", "text":"Проверка длинного ответа.", "choices":[
+		{"text":"1. Сделать копию с авторством и доступом только для чтения, чтобы текст переносился внутри кнопки", "id":"long"},
+		{"text":"2. Спокойно отказаться от копии", "id":"short"},
+		{"text":"3. Передать Артрею логин и пароль", "id":"other"}
+	]}])
+	dialogue.advance()
+	await process_frame
+	check(dialogue.choice_buttons.size() == 3, "phone choices render all answer buttons")
+	for choice_button in dialogue.choice_buttons:
+		var choice_label := choice_button.get_child(0) as RichTextLabel
+		check(choice_label != null and choice_label.clip_contents and choice_label.size.y > 0.0, "phone answer text stays inside a clipped button")
+		if choice_label != null:
+			check(choice_label.get_content_height() <= choice_label.size.y + 1.0, "wrapped phone answer fits its button")
 	game.start_vn_demo()
 	check(not dialogue.phone_chat_mode and dialogue._dialogue_window_layer.visible, "Returning to VN restores the authored panel")
+	dialogue.start([{"speaker_id":"grat", "speaker":"Грат", "text":"Выбери один из четырёх вариантов.", "choices":[
+		{"text":"1. Посмотреть на процессы", "id":"a"},
+		{"text":"2. Подойти к Intel", "id":"b"},
+		{"text":"3. Магазин памяти", "id":"c"},
+		{"text":"4. Начать свидание", "id":"d"}
+	]}])
+	dialogue.advance()
+	await process_frame
+	check(dialogue.choice_buttons.size() == 4, "four-answer dialogue displays all choices")
+	check(dialogue._active_dialogue_rect.end.y <= dialogue.size.y and dialogue._choice_layer.position.y + dialogue._choice_layer.size.y <= dialogue._active_dialogue_rect.end.y, "four-answer layout stays inside dialogue panel and viewport (panel %s, choices %s, viewport %s)" % [dialogue._active_dialogue_rect, dialogue._choice_layer.get_rect(), dialogue.size])
+	check(dialogue.choice_buttons[3].position.y + dialogue.choice_buttons[3].size.y <= dialogue._choice_layer.size.y + 1.0, "fourth answer stays inside the answer list")
+	dialogue.handle_key(KEY_SPACE)
+	check(dialogue.choice_buttons.size() == 4, "Space does not skip a four-answer decision")
+	dialogue.handle_key(KEY_ENTER)
+	check(dialogue.choice_buttons.is_empty(), "Enter confirms the highlighted answer")
+	game.start_vn_demo()
 	dialogue.start([{"speaker_id":"narrator", "speaker":"СЦЕНА", "text":"Проверка страницы без аватаров.", "portraits":{}}])
 	check(not dialogue._line_has_portraits, "Portrait halos are disabled on avatar-free dialogue pages")
 	DirAccess.remove_absolute(game.save_path)

@@ -1,35 +1,79 @@
 extends Control
+const MiniGameStyle = preload("res://scripts/minigame_skin.gd")
 
 signal checkpoint_changed(data: Dictionary)
 signal finished(result: Dictionary)
 signal pause_requested
 
 class WireVisual extends Control:
+	const STRAIGHT_TEXTURE: Texture2D = preload("res://assets/ui/minigames/wire-straight.png")
+	const ELBOW_TEXTURE: Texture2D = preload("res://assets/ui/minigames/wire-elbow.png")
 	var ports: Array[int] = []
+	var joined_ports: Array[int] = []
 	var powered := false
 
-	func set_wire(new_ports: Array[int], is_powered: bool) -> void:
+	func set_wire(new_ports: Array[int], is_powered: bool, new_joined_ports: Array[int]) -> void:
 		ports = new_ports.duplicate()
+		joined_ports = new_joined_ports.duplicate()
 		powered = is_powered
 		queue_redraw()
 
 	func _draw() -> void:
 		var center := size * 0.5
-		var wire_color := Color("a8efb7") if powered else Color("d5c4df")
-		var underlay_color := Color("31533c") if powered else Color("16151d")
-		for port in ports:
-			var direction := Vector2.ZERO
-			match port:
-				0: direction = Vector2.UP
-				1: direction = Vector2.RIGHT
-				2: direction = Vector2.DOWN
-				3: direction = Vector2.LEFT
-			var extent := size.x * 0.5 - 3.5 if not is_zero_approx(direction.x) else size.y * 0.5 - 3.5
-			var end_point := center + direction * extent
-			draw_line(center, end_point, underlay_color, 13.0, true)
-			draw_line(center, end_point, wire_color, 7.0, true)
-		draw_circle(center, 9.0, underlay_color)
-		draw_circle(center, 5.0, wire_color)
+		var is_straight := ports.size() == 2 and (ports.has(0) and ports.has(2) or ports.has(1) and ports.has(3))
+		var texture: Texture2D = STRAIGHT_TEXTURE if is_straight else ELBOW_TEXTURE
+		var angle := 0.0
+		if is_straight:
+			if ports.has(0) and ports.has(2): angle = PI * 0.5
+		else:
+		# The full-cell elbow sprite joins the top and right edge at their centers.
+			if ports.has(0) and ports.has(1): angle = 0.0
+			elif ports.has(1) and ports.has(2): angle = PI * 0.5
+			elif ports.has(2) and ports.has(3): angle = PI
+			else: angle = PI * 1.5
+		# Rotate the square sprite first, then fit it to this 4:3 tile. This
+		# keeps all four ports on the edge midpoints after every quarter-turn.
+		var scale_x := size.x / 96.0
+		var scale_y := size.y / 96.0
+		var cosine := cos(angle)
+		var sine := sin(angle)
+		var transform := Transform2D(
+			Vector2(scale_x * cosine, scale_y * sine),
+			Vector2(-scale_x * sine, scale_y * cosine),
+			center
+		)
+		var sprite_rect := Rect2(-Vector2.ONE * 48.0, Vector2.ONE * 96.0)
+		draw_set_transform_matrix(transform)
+		if powered:
+			draw_texture_rect(texture, sprite_rect, false, Color(0.40, 1.0, 0.83, 0.28))
+		draw_texture_rect(texture, sprite_rect, false)
+		if powered:
+			draw_texture_rect(texture, sprite_rect, false, Color(0.48, 1.0, 0.82, 0.34))
+		# Bridge only real neighbor connections. This covers the tile border at
+		# the seam without making the source or door ends stick out of the board.
+		var turns := posmod(roundi(angle / (PI * 0.5)), 4)
+		for world_side in joined_ports:
+			var local_side := posmod(world_side - turns, 4)
+			var source_rect: Rect2
+			var target_rect: Rect2
+			var extension := 3.0 / (scale_y if local_side % 2 == 0 else scale_x)
+			if is_straight:
+				if local_side == 1:
+					source_rect = Rect2(61, 26, 3, 12)
+					target_rect = Rect2(48, -9, extension, 18)
+				else:
+					source_rect = Rect2(0, 26, 3, 12)
+					target_rect = Rect2(-48 - extension, -9, extension, 18)
+			elif local_side == 0:
+				source_rect = Rect2(26, 0, 12, 3)
+				target_rect = Rect2(-9, -48 - extension, 18, extension)
+			else:
+				source_rect = Rect2(61, 26, 3, 12)
+				target_rect = Rect2(48, -9, extension, 18)
+			draw_texture_rect_region(texture, target_rect, source_rect)
+			if powered:
+				draw_texture_rect_region(texture, target_rect, source_rect, Color(0.48, 1.0, 0.82, 0.34))
+		draw_set_transform_matrix(Transform2D.IDENTITY)
 
 const LEVELS := [
 	{"name":"Питание двери","instruction":"Проведи питание через прямой участок к двери.","tiles":[{"cell":3,"type":"straight","rot":1},{"cell":4,"type":"straight","rot":1},{"cell":5,"type":"straight","rot":1}]},
@@ -67,12 +111,15 @@ func _ready() -> void:
 		var button := Button.new()
 		button.position = Vector2(306 + float(i % 3) * 96,126 + float(i / 3) * 72)
 		button.size = Vector2(96,72)
+		button.clip_contents = false
 		button.text = ""
 		button.pressed.connect(func(index: int = i): _rotate_tile(index))
 		add_child(button)
 		tiles.append(button)
 		var wire := WireVisual.new()
 		wire.size = button.size
+		wire.z_index = 2
+		wire.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		wire.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		button.add_child(wire)
 		wire_visuals.append(wire)
@@ -83,6 +130,7 @@ func _ready() -> void:
 	verify_button = _button("Проверить маршрут",Vector2(360,462),Vector2(240,40),_verify)
 	_button("Сбросить схему",Vector2(660,462),Vector2(170,40),_reset_level)
 	_load_level()
+	MiniGameStyle.apply(self, Color("17252a"), Color("4e9a83"), Color("a8efb7"))
 
 func open(snapshot: Dictionary = {}) -> void:
 	level = clampi(int(snapshot.get("level",0)),0,LEVELS.size()-1)
@@ -195,7 +243,24 @@ func _render() -> void:
 		var ports: Array[int] = []
 		for side in range(4):
 			if _opens(i,side): ports.append(side)
-		(wire_visuals[i] as WireVisual).set_wire(ports,powered)
+		var joined_ports: Array[int] = []
+		var x := i % 3
+		var y := int(i / 3)
+		var directions := [
+			{"dx":0,"dy":-1,"side":0,"back":2},
+			{"dx":1,"dy":0,"side":1,"back":3},
+			{"dx":0,"dy":1,"side":2,"back":0},
+			{"dx":-1,"dy":0,"side":3,"back":1}
+		]
+		for direction in directions:
+			var side: int = direction.side
+			var nx: int = x + int(direction.dx)
+			var ny: int = y + int(direction.dy)
+			if _opens(i, side) and nx >= 0 and nx < 3 and ny >= 0 and ny < 3:
+				var neighbor := ny * 3 + nx
+				if _opens(neighbor, int(direction.back)):
+					joined_ports.append(side)
+		(wire_visuals[i] as WireVisual).set_wire(ports,powered,joined_ports)
 	if _has_route():
 		status_label.text = "Путь подключён до двери. Нажми «Проверить маршрут»."
 		status_label.add_theme_color_override("font_color",Color("a8e6ba"))

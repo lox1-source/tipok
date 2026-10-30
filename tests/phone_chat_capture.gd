@@ -15,6 +15,8 @@ func run() -> void:
 	game.save_path = save_path
 	root.add_child(game)
 	await process_frame
+	game.show_notebook()
+	await capture("notebook-window.png")
 	game.show_friends_chat()
 	await capture("phone-friends-chat.png")
 	var entries: Array = load("res://scripts/early_content.gd").artrey_intro()

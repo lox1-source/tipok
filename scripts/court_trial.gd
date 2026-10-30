@@ -1,4 +1,5 @@
 extends Control
+const MiniGameStyle = preload("res://scripts/minigame_skin.gd")
 
 signal checkpoint_changed(data: Dictionary)
 signal finished(result: Dictionary)
@@ -45,6 +46,7 @@ func _ready() -> void:
 	present_button = _button(self,"Предъявить улику",Vector2(350,401),Vector2(260,48),_submit)
 	status_label = _label(self,"",Vector2(44,464),Vector2(870,42),15,Color("d8c8e4"))
 	_render()
+	MiniGameStyle.apply(self, Color("292126"), Color("98735f"), Color("e9d6be"))
 
 func open(snapshot: Dictionary = {}, context: Dictionary = {}) -> void:
 	story_context = context.duplicate(true)

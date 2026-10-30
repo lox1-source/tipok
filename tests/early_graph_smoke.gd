@@ -30,7 +30,7 @@ func run() -> void:
 			widget.advance()
 			await process_frame
 			if widget._text.get_content_height() > widget._text.size.y + 1:
-				failures.append("Text clips: "+str(entry.text))
+				failures.append("Text clips (%s px in %s px at %s pt): %s" % [widget._text.get_content_height(), widget._text.size.y, widget._text.get_theme_font_size("normal_font_size"), str(entry.text)])
 	print("EARLY GRAPH AND TEXT RESULT: ","PASS" if failures.is_empty() else "FAIL")
 	for failure in failures: push_error(failure)
 	widget.queue_free()

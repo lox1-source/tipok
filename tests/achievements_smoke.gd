@@ -21,7 +21,7 @@ func run() -> void:
 	manager.notifications_enabled = false
 	manager.save_path = temp_path
 	manager.unlocked.clear()
-	check(manager.get_total_count() == 38, "каталог содержит существующие достижения и три телефонные пасхалки")
+	check(manager.get_total_count() == 39, "каталог содержит существующие достижения и три телефонные пасхалки")
 	check(manager.unlock_achievement("first_choice"), "достижение открывается один раз")
 	check(not manager.unlock_achievement("first_choice"), "повторно достижение не выдаётся")
 	check(not manager.get_unlocked_at("first_choice").is_empty(), "сохраняется дата получения")
@@ -38,23 +38,24 @@ func run() -> void:
 	root.add_child(menu)
 	await process_frame
 	var achievements_button_found := false
-	for child in menu.menu_panel.get_children():
+	for child in menu.menu_button_list:
 		if child is Button and child.text == "Мои достижения":
 			achievements_button_found = true
 	check(achievements_button_found, "главное меню содержит кнопку достижений")
 	var regions := {}
 	for definition in manager.get_catalog():
 		var icon: Texture2D = manager.get_icon(str(definition.id))
-		var is_standalone_icon := str(definition.id) in ["polaroid_secret", "call_drx", "call_tables", "call_palych"]
+		var is_standalone_icon := str(definition.id) == "doodle_jump_found"
 		check(icon != null and icon.get_size().x > 0, "иконка загружается: " + str(definition.id))
 		if is_standalone_icon:
 			check(not icon is AtlasTexture, "особая награда подключена отдельной текстурой: " + str(definition.id))
 		elif icon is AtlasTexture:
 			regions[str(icon.region)] = true
-	check(regions.size() == manager.get_total_count() - 4, "все награды атласа сохраняют разные ячейки")
-	check(manager.get_icon("approved_ending",true).region != manager.get_icon("approved_ending").region, "секретная иконка скрыта до получения")
+	var hidden_call_icon: Texture2D = manager.get_icon("call_drx")
+	check(hidden_call_icon is AtlasTexture and hidden_call_icon.region == manager.get_icon("approved_ending").region, "закрытые секреты используют общий знак вопроса")
 	menu._open_achievements()
 	check(menu.achievements_panel.visible, "экран достижений открывается")
+	check(menu.background_art.visible, "фон главного меню остаётся видимым под списком достижений")
 	check(menu.achievements_panel.find_child("AchievementScroll", true, false) is ScrollContainer, "список достижений прокручивается")
 	check(menu.achievements_panel.find_child("AchievementCategories", true, false) is HBoxContainer, "категории созданы")
 	check(menu.achievements_panel.find_child("AchievementFilters", true, false) is HBoxContainer, "фильтры созданы")
@@ -81,6 +82,8 @@ func run() -> void:
 	check(manager.has_achievement("platinum"), "платина открывается после всех остальных, без цикла")
 	menu._close_achievements()
 	check(not menu.achievements_panel.visible and menu.menu_panel.visible, "назад возвращает в главное меню")
+	check(menu.background_art.visible, "после закрытия достижений фон главного меню восстановлен")
+	check(not menu.exit_confirmation.visible, "возврат из достижений не открывает подтверждение выхода")
 	manager.unlocked.clear()
 	manager.notifications_enabled = true
 	manager.unlock_achievement("first_choice")

@@ -197,6 +197,19 @@ func run() -> void:
 	var bed_bottom := (bed_collision.global_transform * Vector2(0, bed_rectangle.size.y * 0.5)).y
 	var expected_stop := bed_bottom + player_circle.radius - player_collision.position.y
 	check(absf(game.player.position.y - expected_stop) < 0.5,"Current bed footprint blocks movement at its lower edge")
+	game.show_ending()
+	var ending_note: Label
+	var ending_buttons: Array[Button] = []
+	for child in game.app_panel.get_children():
+		if child is Label and str(child.text).contains("Продолжение следует"):
+			ending_note = child
+		elif child is Button and child.visible:
+			ending_buttons.append(child)
+	check(ending_note != null and ending_buttons.size() == 2, "Prologue ending shows its note and both actions")
+	if ending_note != null:
+		var note_rect := Rect2(ending_note.position, ending_note.size)
+		for ending_button in ending_buttons:
+			check(not note_rect.intersects(Rect2(ending_button.position, ending_button.size)), "Prologue ending note does not overlap buttons")
 	game.player.position=Vector2(450,340)
 	await screenshot("prologue-room-compact.png")
 	DirAccess.remove_absolute(game.save_path)

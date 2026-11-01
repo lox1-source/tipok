@@ -93,6 +93,12 @@ var status_label: Label
 var progress_label: Label
 var verify_button: Button
 var hint_stage := 0
+var tutorial: Control
+var tutorial_seen := false
+var tutorial_done := false
+var tutorial_wire: WireVisual
+var tutorial_feedback: Label
+var tutorial_continue: Button
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -106,10 +112,11 @@ func _ready() -> void:
 	_label("ПОСЛЕДНЯЯ СБОРКА · МАРШРУТИЗАТОР",Vector2(30,14),Vector2(760,36),22,Color("e9d6be"))
 	_button("Пауза",Vector2(850,16),Vector2(82,30),func(): pause_requested.emit())
 	progress_label = _label("",Vector2(36,56),Vector2(880,30),15,Color("cbbbd8"))
-	_label("Нажимай на плитку, чтобы повернуть провод. Соедини источник слева с дверью справа; подключённый путь светится зелёным.",Vector2(36,87),Vector2(888,32),13,Color("b8b3c2"))
+	_label("Поворачивай провода: источник слева → дверь справа. Подключённый путь светится зелёным.",Vector2(36,87),Vector2(720,32),13,Color("b8b3c2"))
+	_button("Как играть?",Vector2(784,87),Vector2(144,28),_show_tutorial)
 	for i in range(9):
 		var button := Button.new()
-		button.position = Vector2(306 + float(i % 3) * 96,126 + float(i / 3) * 72)
+		button.position = Vector2(306 + float(i % 3) * 96,126 + floori(float(i) / 3.0) * 72)
 		button.size = Vector2(96,72)
 		button.clip_contents = false
 		button.text = ""
@@ -129,6 +136,7 @@ func _ready() -> void:
 	_button("Подсказка",Vector2(140,462),Vector2(160,40),_hint)
 	verify_button = _button("Проверить маршрут",Vector2(360,462),Vector2(240,40),_verify)
 	_button("Сбросить схему",Vector2(660,462),Vector2(170,40),_reset_level)
+	_build_tutorial()
 	_load_level()
 	MiniGameStyle.apply(self, Color("17252a"), Color("4e9a83"), Color("a8efb7"))
 
@@ -137,12 +145,101 @@ func open(snapshot: Dictionary = {}) -> void:
 	turns = clampi(int(snapshot.get("turns",0)),0,10000)
 	mistakes = clampi(int(snapshot.get("mistakes",0)),0,10000)
 	hint_stage = clampi(int(snapshot.get("hint_stage",0)),0,3)
+	tutorial_seen = bool(snapshot.get("tutorial_seen",false)) or level > 0 or turns > 0
+	tutorial_done = false
+	tutorial.visible = not tutorial_seen
+	_update_tutorial()
 	_load_level(snapshot.get("rotations",[]))
 	show()
 	checkpoint_changed.emit(snapshot())
 
 func snapshot() -> Dictionary:
-	return {"level":level,"rotations":rotations.duplicate(),"turns":turns,"mistakes":mistakes,"hint_stage":hint_stage}
+	return {"level":level,"rotations":rotations.duplicate(),"turns":turns,"mistakes":mistakes,"hint_stage":hint_stage,"tutorial_seen":tutorial_seen}
+
+func _build_tutorial() -> void:
+	tutorial = Control.new()
+	tutorial.name = "WirePractice"
+	tutorial.size = size
+	tutorial.z_index = 30
+	add_child(tutorial)
+	var shade := ColorRect.new()
+	shade.size = size
+	shade.color = Color(0.04,0.045,0.07,0.97)
+	tutorial.add_child(shade)
+	var title := Label.new()
+	title.text = "ПОПРОБУЙ ПОВЕРНУТЬ ПРОВОД"
+	title.position = Vector2(175,90)
+	title.size = Vector2(610,42)
+	title.add_theme_font_size_override("font_size",24)
+	tutorial.add_child(title)
+	var explanation := Label.new()
+	explanation.text = "Слева источник, справа дверь. Нажми на провод, чтобы направить его к обоим контактам."
+	explanation.position = Vector2(175,155)
+	explanation.size = Vector2(610,63)
+	explanation.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	explanation.add_theme_font_size_override("font_size",17)
+	tutorial.add_child(explanation)
+	var practice := Button.new()
+	practice.position = Vector2(432,244)
+	practice.size = Vector2(96,96)
+	practice.text = ""
+	practice.pressed.connect(func():
+		tutorial_done = true
+		_update_tutorial())
+	tutorial.add_child(practice)
+	tutorial_wire = WireVisual.new()
+	tutorial_wire.size = practice.size
+	tutorial_wire.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	tutorial_wire.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	practice.add_child(tutorial_wire)
+	var source := Label.new()
+	source.text = "ИСТОЧНИК →"
+	source.position = Vector2(268,270)
+	source.size = Vector2(162,35)
+	source.add_theme_font_size_override("font_size",16)
+	tutorial.add_child(source)
+	var door := Label.new()
+	door.text = "→ ДВЕРЬ"
+	door.position = Vector2(541,270)
+	door.size = Vector2(150,35)
+	door.add_theme_font_size_override("font_size",16)
+	tutorial.add_child(door)
+	tutorial_feedback = Label.new()
+	tutorial_feedback.position = Vector2(220,363)
+	tutorial_feedback.size = Vector2(520,38)
+	tutorial_feedback.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tutorial_feedback.add_theme_font_size_override("font_size",16)
+	tutorial.add_child(tutorial_feedback)
+	tutorial_continue = Button.new()
+	tutorial_continue.text = "Собрать настоящую схему"
+	tutorial_continue.position = Vector2(332,430)
+	tutorial_continue.size = Vector2(296,42)
+	tutorial_continue.pressed.connect(_finish_tutorial)
+	tutorial.add_child(tutorial_continue)
+	_update_tutorial()
+
+func _show_tutorial() -> void:
+	tutorial_done = false
+	_update_tutorial()
+	tutorial.show()
+
+func _update_tutorial() -> void:
+	if not is_instance_valid(tutorial_wire): return
+	var practice_ports: Array[int] = []
+	if tutorial_done:
+		practice_ports.append_array([1, 3])
+	else:
+		practice_ports.append_array([0, 2])
+	var joined_ports: Array[int] = []
+	tutorial_wire.set_wire(practice_ports, tutorial_done, joined_ports)
+	tutorial_feedback.text = "Сигнал дошёл до двери. Теперь повтори на поле 3 × 3." if tutorial_done else "Провод пока направлен вверх и вниз. Нажми на него."
+	tutorial_continue.disabled = not tutorial_done
+
+func _finish_tutorial() -> void:
+	if not tutorial_done: return
+	tutorial_seen = true
+	tutorial.hide()
+	checkpoint_changed.emit(snapshot())
 
 func _load_level(saved_rotations: Variant = []) -> void:
 	var level_data: Dictionary = LEVELS[level]
@@ -194,7 +291,7 @@ func _has_route() -> bool:
 	while not queue.is_empty():
 		var cell: int = int(queue.pop_front())
 		var x: int = cell % 3
-		var y: int = int(cell / 3)
+		var y: int = floori(float(cell) / 3.0)
 		if cell == 5 and _opens(cell,1): return true
 		for direction in dirs:
 			if not _opens(cell,int(direction.out)): continue
@@ -245,7 +342,7 @@ func _render() -> void:
 			if _opens(i,side): ports.append(side)
 		var joined_ports: Array[int] = []
 		var x := i % 3
-		var y := int(i / 3)
+		var y := floori(float(i) / 3.0)
 		var directions := [
 			{"dx":0,"dy":-1,"side":0,"back":2},
 			{"dx":1,"dy":0,"side":1,"back":3},
@@ -281,7 +378,7 @@ func _connected_cells() -> Dictionary:
 	while not queue.is_empty():
 		var cell: int = int(queue.pop_front())
 		var x: int = cell % 3
-		var y: int = int(cell / 3)
+		var y: int = floori(float(cell) / 3.0)
 		for direction in dirs:
 			if not _opens(cell,int(direction.out)):
 				continue
@@ -298,6 +395,8 @@ func _connected_cells() -> Dictionary:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if visible and event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode in [KEY_ESCAPE,KEY_P]: pause_requested.emit(); get_viewport().set_input_as_handled()
+		elif tutorial.visible and event.keycode == KEY_ENTER and tutorial_done: _finish_tutorial(); get_viewport().set_input_as_handled()
+		elif tutorial.visible: get_viewport().set_input_as_handled()
 		elif event.keycode == KEY_ENTER: _verify(); get_viewport().set_input_as_handled()
 
 func _label(value: String, pos: Vector2, area: Vector2, font_size: int, color: Color) -> Label:

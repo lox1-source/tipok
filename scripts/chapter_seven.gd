@@ -3,13 +3,16 @@ extends RefCounted
 const S = preload("res://scripts/story_dialogue.gd")
 
 static func opening(values: Dictionary) -> Array:
+	var grok_line := "Проверю геометрию. Но вместо обещаний покажи работающую дверь." if int(values.get("lies_count",0)) >= 2 else "Я могу посмотреть геометрию. Сначала покажи, что собрал сам."
+	var jbt_line := "Проверю экспорт. Ошибки назови и исправь сам — после суда это важно." if bool(values.get("lied_in_court",false)) else "Помогу с проверкой экспорта. Ты ведёшь сборку."
+	var artrey_line := "Питч снят. Копия у тебя. Решение о релизе тоже." if not bool(values.get("artbay_contract_signed",false)) and bool(values.get("artbay_betrayal",false)) else "Страницу автора исправил. Покажешь мне финальную сборку до отправки?"
 	var entries: Array = [
-		S.line("narrator","neutral","Глава 7. Последняя сборка. До дедлайна релиза осталось несколько часов, а на экране всё ещё мигает: KEY NOT FOUND."),
-		S.line("grok","neutral","Я могу помочь с геометрией. Но скажи честно: ты бы позвал меня, если бы ключ уже был?"),
-		S.line("jbt","neutral","Я проведу тебя через проверку. Только не записывай мою помощь как обязанность."),
-		S.line("artrey","neutral","Публикация готова. Но сначала реши, кто отвечает за сборку и кому принадлежат файлы."),
-		S.line("grat","happy","Сначала соберу игру так, чтобы дверь открылась. Потом отвечу каждому прямо."),
-		S.line("narrator","neutral","На монтажном столе четыре схемы маршрутизации. Поворачивай узлы и проведи сигнал от источника к двери. Ошибки можно исправить.","last_build")
+		S.line("narrator","neutral","Грат перенёс восстановленные файлы из «Старых проектов» в последнюю сборку. До релиза несколько часов, но тест двери всё ещё пишет: KEY NOT FOUND."),
+		S.line("grok","neutral",grok_line),
+		S.line("jbt","neutral",jbt_line),
+		S.line("artrey","neutral",artrey_line),
+		S.line("grat","neutral","Сначала проведу сигнал к двери и проверю её. Потом решу, как выпускать игру."),
+		S.line("narrator","neutral","На монтажном столе четыре схемы. Поворачивай узлы, пока сигнал не дойдёт от источника до двери. Повороты можно исправлять.","last_build")
 	]
 	entries[5]["story_event"] = "last_build"
 	return S.compile(entries)
@@ -24,30 +27,30 @@ static func final_choice(values: Dictionary) -> Array:
 	var entries: Array = [
 		S.line("narrator","neutral","Дверь открылась. На экране готовая игра и несколько вариантов релиза. Выбери решение; игра покажет его последствия."),
 		S.line("grat","neutral","Что я хочу сохранить, когда игра выйдет?","choice"),
-		S.line("grat","neutral","Личный маршрут. С кем я хочу быть рядом?","relationships"),
-		S.line("grat","neutral","Решение о проекте. Как мы выпускаем игру?","project_routes"),
-		S.line("grat","neutral","Особые варианты доступны только при выполнении условий.","special_routes"),
+		S.line("grat","neutral","С кем я хочу продолжить после релиза?","relationships"),
+		S.line("grat","neutral","Как выпустить игру: одному или вместе?","project_routes"),
+		S.line("grat","neutral","Есть ещё печать, старый протокол и несколько трудных разговоров.","special_routes"),
 		S.line("grat","neutral","Рискованные исходы: контроль Артрея или признание использования друзей.","risk_routes")
 	]
-	var main_choices: Array = [S.choice("Личный маршрут","c7_page_relationships","relationships"),S.choice("Решение о проекте","c7_page_project","project_routes")]
+	var main_choices: Array = [S.choice("Поговорить о том, кто останется рядом","c7_page_relationships","relationships"),S.choice("Решить, как выпустить игру","c7_page_project","project_routes")]
 	var relationships: Array = []
-	if bool(values.get("grok_date_completed",false)) and bool(values.get("grok_without_key",false)):
+	if bool(values.get("grok_date_completed",false)) and bool(values.get("grok_without_key",false)) and int(values.get("affection_grok",0)) >= 3 and int(values.get("lies_count",0)) < 2:
 		relationships.append(S.choice("Попросить Грок остаться рядом, даже без задачи","c7_grok","grok"))
-	if bool(values.get("gpt_boundaries",false)):
+	if bool(values.get("gpt_boundaries",false)) and int(values.get("affection_gpt",0)) >= 3 and not bool(values.get("lied_in_court",false)):
 		relationships.append(S.choice("Выбрать ЖБТ как партнёра по жизни и работе","c7_jbt","jbt"))
-	if bool(values.get("artbay_contract_signed",false)) and bool(values.get("project_ownership_proven",false)):
+	if bool(values.get("artbay_contract_signed",false)) and bool(values.get("project_ownership_proven",false)) and bool(values.get("artbay_repaired",false)):
 		relationships.append(S.choice("Подписать с Артреем проверенный договор","c7_artrey","artrey"))
 	relationships.append(S.choice("Назад","c7_back_relationships","choice"))
 	entries[2]["choices"] = relationships
 	var project_routes: Array = [S.choice("Выпустить игру одному и поблагодарить всех","c7_solo","solo"),S.choice("Назад","c7_back_project","choice")]
-	if bool(values.get("defused_tab_war",false)):
+	if bool(values.get("defused_tab_war",false)) and not bool(values.get("artbay_control_taken",false)):
 		project_routes.push_front(S.choice("Закончить игру вместе, без обещаний отношений","c7_team","team"))
 	entries[3]["choices"] = project_routes
 	var choices: Array = []
 	if bool(values.get("secret_protocol",false)) and (bool(values.get("stamp_obtained",false)) or bool(values.get("stamp_stolen",false))):
 		choices.append(S.choice("Достать Протокол 0 и министерскую печать","c7_ministry","ministry"))
-	if bool(values.get("defused_tab_war",false)) and int(values.get("affection_grok",0)) >= 2 and int(values.get("affection_gpt",0)) >= 2 and int(values.get("affection_artbay",0)) >= 2:
-		choices.append(S.choice("Секретно: обещать всем троим романтический финал","c7_triple","triple"))
+	if bool(values.get("defused_tab_war",false)) and int(values.get("affection_grok",0)) >= 2 and int(values.get("affection_gpt",0)) >= 2:
+		choices.append(S.choice("Пообещать отношения Грок и ЖБТ одновременно","c7_triple","triple"))
 	var risk_choices: Array = []
 	if bool(values.get("artbay_control_taken",false)):
 		risk_choices.append(S.choice("Оставить контроль публикации Артрею","c7_artrey_bad","artbay_bad"))
@@ -57,7 +60,7 @@ static func final_choice(values: Dictionary) -> Array:
 		choices.append(S.choice("Рискованные исходы","c7_page_risk","risk_routes"))
 	entries[5]["choices"] = risk_choices + [S.choice("Назад","c7_back_risk","special_routes")]
 	if choices.size() > 0:
-		main_choices.append(S.choice("Особые варианты","c7_page_special","special_routes"))
+		main_choices.append(S.choice("Разобраться с печатью и последствиями","c7_page_special","special_routes"))
 	entries[1]["choices"] = main_choices
 	choices.append(S.choice("Назад","c7_back_special","choice"))
 	entries[4]["choices"] = choices
@@ -134,21 +137,22 @@ static func final_choice(values: Dictionary) -> Array:
 		["artrey","neutral","Я не жду, что ты меня простишь. Я могу только убрать свою публикацию."],
 		["grat","neutral","Убери. Остальное я решу не сегодня."],
 	])
+	var artrey_in_team := bool(values.get("artbay_contract_signed",false)) and bool(values.get("project_ownership_proven",false)) and bool(values.get("artbay_repaired",false))
 	_append_ending(entries,"team",[
 		["grat","neutral","Предлагаю команду, но без общего доступа ко всему и без обещаний отношений."],
 		["grok","neutral","Я беру визуальные тесты. Ключи и личные аккаунты остаются моими."],
 		["jbt","neutral","Я проверяю экспорт и список ошибок. Исправления вносит тот, кто за них отвечает."],
-		["artrey","neutral","Я веду публикацию и договор. Каждый видит страницу до отправки."],
+		["artrey" if artrey_in_team else "narrator","neutral","Я веду публикацию и договор. Каждый видит страницу до отправки." if artrey_in_team else "Артрей не входит в команду после спора об авторстве. Грат сам готовит страницу публикации."],
 		["grat","neutral","А я собираю игру и отвечаю за то, что в ней написано."],
 		["grok","happy","Получается, я не круглосуточная служба «почини за меня»."],
 		["grat","happy","Нет. Ты человек, который согласился на конкретную задачу и может закончить её."],
 		["jbt","neutral","Записала роли. И ещё: если кто-то хочет выйти из команды, это не считается предательством."],
-		["artrey","happy","Добавлю в план. Даже у плана теперь есть кнопка выхода."],
+		["artrey" if artrey_in_team else "grat","happy","Добавлю в план. Даже у плана теперь есть кнопка выхода." if artrey_in_team else "Добавлю в план право уйти. Не думал, что это тоже часть команды."],
 		["narrator","neutral","Команда закрывает последние ошибки. Никто не обещает близость в обмен на работу."],
 		["grat","neutral","Я раньше называл командой людей, которых не спрашивал. Это не повторится."],
 		["grok","neutral","Хорошее начало. Теперь спроси, кто хочет пиццу."],
 		["jbt","happy","Я хочу. Но не отвечаю за её тестирование."],
-		["artrey","neutral","Я закажу и пришлю чек. Финансы тоже в общей папке."],
+		["artrey" if artrey_in_team else "grat","neutral","Я закажу и пришлю чек. Финансы тоже в общей папке." if artrey_in_team else "Пиццу закажу сам. Чек сохраню, но не как улику."],
 		["narrator","neutral","Игра выходит под именем Грата с перечисленным вкладом команды. Дружба остаётся дружбой, а не скрытым контрактом."],
 		["grat","happy","Релиз собран. Можно впервые открыть проект не ради того, чтобы срочно что-то чинить."],
 	])
@@ -171,10 +175,10 @@ static func final_choice(values: Dictionary) -> Array:
 		["narrator","neutral","Игра выходит с настоящей сборкой и совершенно ненастоящей, но официально заверенной, бюрократией."],
 	])
 	_append_ending(entries,"triple",[
-		["narrator","neutral","Грат нажимает «обещать всем». Принтер издаёт звук судебного молотка, хотя у принтера нет молотка."],
+		["narrator","neutral","Грат обещает Грок и ЖБТ отношения, даже не спросив их. Принтер издаёт звук судебного молотка."],
 		["grok","angry","Ты не можешь назначить нас концовкой одним нажатием."],
 		["jbt","angry","Симпатия — не согласие. И уж точно не общий календарь свиданий."],
-		["artrey","neutral","Я уже подготовил форму отказа от участия в этом сюжете."],
+		["artrey","neutral","Я твой друг, но даже я вижу: ты за них обеих всё решил."],
 		["grat","surprised","Я думал, если всем сказать то, что они хотят услышать, никто не уйдёт."],
 		["grok","neutral","Вот поэтому мы сейчас и уходим на совещание без тебя."],
 		["narrator","neutral","Принтер выдаёт Грату повестку за превышение симпатии. Романтический маршрут отменён; игру можно завершить честным выбором."],
@@ -238,5 +242,5 @@ static func ending_text(id: String, values: Dictionary) -> String:
 		"team": return "Команда выпускает игру с распределёнными ролями и видимыми авторами. Помощь не превращается в романтическое обещание."
 		"instrumental": return "Друзья отказываются работать бесплатно. Грат восстанавливает проект из собственной резервной копии; извинения не отменяют потерянного доверия."
 		"ministry": return "Министерство одобряет отсутствующий ключ. Протокол 0 остаётся уликой, а не заменой настоящего релиза."
-		"triple": return "Грат обещает всем троим романтический финал. Они отказываются быть его концовкой, а принтер оформляет повестку за превышение симпатии."
+		"triple": return "Грат обещает отношения Грок и ЖБТ без их согласия. Принтер оформляет повестку за превышение симпатии."
 		_: return "Грат выпускает игру самостоятельно, перечисляет реальный вклад каждого и принимает ответственность за сборку."

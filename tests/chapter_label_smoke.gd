@@ -54,7 +54,7 @@ func run() -> void:
 	game.story.set_value("grok_date_completed",true)
 	game.start_artrey()
 	check(2,"Artrey postscript remains in chapter 2")
-	game.chapter_two_complete = true
+	game._finish_chapter_two()
 	game.start_chapter_three()
 	check(3,"Chapter 3 room launch stays chapter 3 despite chapter 2 completion")
 	check_condition(game.mode == "room" and game.chapter_computer_pending == 3,"Chapter start waits for the player to use the computer")
@@ -65,6 +65,10 @@ func run() -> void:
 	check(3,"Tab war belongs to chapter 3")
 	await reload_game()
 	check(3,"Minigame reload keeps chapter 3")
+	for panel in game.tab_war.tutorial.get_children():
+		if panel is Panel:
+			for child in panel.get_children():
+				if child is Button and child.text == "×": child.pressed.emit()
 	game.tab_war.choose_side("grok")
 	game.tab_war.state.finish(false,"surrender")
 	game.tab_war._changed()

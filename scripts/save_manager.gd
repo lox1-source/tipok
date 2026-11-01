@@ -56,7 +56,7 @@ func set_dev_minigame(game_id: String) -> void:
 	dev_call_event = ""
 	dev_credits = false
 	dev_ending = ""
-	dev_minigame = game_id if game_id in ["tab_war", "wire_puzzle", "digital_archaeology", "office_queue", "court_trial"] else ""
+	dev_minigame = game_id if game_id in ["doodle_jump", "tab_war", "wire_puzzle", "digital_archaeology", "office_queue", "court_trial", "hotdog_master"] else ""
 	dev_session = not dev_minigame.is_empty()
 	launch_mode = "direct"
 

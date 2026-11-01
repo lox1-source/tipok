@@ -15,6 +15,11 @@ var prompt_label: Label
 var progress_label: Label
 var status_label: Label
 var present_button: Button
+var tutorial: Control
+var tutorial_seen := false
+var tutorial_done := false
+var tutorial_feedback: Label
+var tutorial_continue: Button
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -30,7 +35,8 @@ func _ready() -> void:
 	progress_label = _label(self,"",Vector2(38,62),Vector2(880,28),15,Color("cbbbd8"))
 	_panel(self,Vector2(32,102),Vector2(896,99),Color("211d2b"))
 	prompt_label = _label(self,"",Vector2(54,120),Vector2(850,66),20,Color("f4e8fb"))
-	_label(self,"ВЫБЕРИ ЛУЧШУЮ УЛИКУ · ошибка не портит дело, после двух промахов будет подсказка",Vector2(38,211),Vector2(880,28),13,Color("b8b3c2"))
+	_label(self,"ВЫБЕРИ ЛУЧШУЮ УЛИКУ · ошибка не портит дело, после двух промахов будет подсказка",Vector2(38,211),Vector2(730,28),13,Color("b8b3c2"))
+	_button(self,"Как играть?",Vector2(781,209),Vector2(145,27),_show_tutorial)
 	for i in range(3):
 		var b := Button.new()
 		b.position = Vector2(34 + i * 300,253)
@@ -45,6 +51,7 @@ func _ready() -> void:
 		card_detail_labels.append(detail)
 	present_button = _button(self,"Предъявить улику",Vector2(350,401),Vector2(260,48),_submit)
 	status_label = _label(self,"",Vector2(44,464),Vector2(870,42),15,Color("d8c8e4"))
+	_build_tutorial()
 	_render()
 	MiniGameStyle.apply(self, Color("292126"), Color("98735f"), Color("e9d6be"))
 
@@ -52,12 +59,26 @@ func open(snapshot: Dictionary = {}, context: Dictionary = {}) -> void:
 	story_context = context.duplicate(true)
 	if snapshot.is_empty(): state.reset()
 	else: state.restore(snapshot)
+	tutorial_seen = bool(snapshot.get("tutorial_seen",false)) or state.round > 0 or not state.selected_card.is_empty()
+	tutorial_done = false
+	tutorial.visible = not tutorial_seen
+	_update_tutorial()
 	show()
 	_render()
-	checkpoint_changed.emit(state.snapshot())
+	checkpoint_changed.emit(_snapshot())
+
+func _snapshot() -> Dictionary:
+	var data: Dictionary = state.snapshot()
+	data["tutorial_seen"] = tutorial_seen
+	return data
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not visible or not event is InputEventKey or not event.pressed or event.echo: return
+	if tutorial.visible:
+		if event.keycode in [KEY_ESCAPE,KEY_P]: pause_requested.emit()
+		elif event.keycode in [KEY_ENTER,KEY_KP_ENTER] and tutorial_done: _finish_tutorial()
+		get_viewport().set_input_as_handled()
+		return
 	if event.keycode in [KEY_ESCAPE,KEY_P]:
 		pause_requested.emit()
 		get_viewport().set_input_as_handled()
@@ -72,13 +93,50 @@ func _select_card(index: int) -> void:
 	var cards: Array = state.current_round().cards
 	state.select_card(str(cards[index].id))
 	_render()
-	checkpoint_changed.emit(state.snapshot())
+	checkpoint_changed.emit(_snapshot())
 
 func _submit() -> void:
 	state.submit()
 	_render()
-	checkpoint_changed.emit(state.snapshot())
+	checkpoint_changed.emit(_snapshot())
 	if state.finished: finished.emit(state.result())
+
+func _build_tutorial() -> void:
+	tutorial = Control.new()
+	tutorial.name = "CourtPractice"
+	tutorial.size = size
+	tutorial.z_index = 30
+	add_child(tutorial)
+	var shade := ColorRect.new()
+	shade.size = size
+	shade.color = Color(0.045,0.03,0.06,0.96)
+	tutorial.add_child(shade)
+	_label(tutorial,"ТРЕНИРОВКА ПЕРЕД СУДОМ",Vector2(148,78),Vector2(660,42),24,Color("f2debe"))
+	_label(tutorial,"Обвинение: «Грат просил помощи только ради ключа». Что покажет весь разговор?",Vector2(148,141),Vector2(664,64),16,Color("eee6f4"))
+	_button(tutorial,"Полная переписка",Vector2(148,232),Vector2(315,56),func():
+		tutorial_done = true
+		_update_tutorial())
+	_button(tutorial,"Один файл key.txt",Vector2(497,232),Vector2(315,56),func():
+		tutorial_feedback.text = "Файл показывает результат, но не весь разговор. Попробуй другую улику.")
+	tutorial_feedback = _label(tutorial,"",Vector2(148,316),Vector2(664,56),15,Color("e8cc9f"))
+	tutorial_continue = _button(tutorial,"К настоящему делу",Vector2(343,408),Vector2(275,43),_finish_tutorial)
+	_update_tutorial()
+
+func _show_tutorial() -> void:
+	tutorial_done = false
+	_update_tutorial()
+	tutorial.show()
+
+func _update_tutorial() -> void:
+	if not is_instance_valid(tutorial_feedback): return
+	tutorial_feedback.text = "Верно: целый разговор даёт контекст. Теперь предъявляй улики в настоящем деле." if tutorial_done else "Выбери одну из двух тренировочных улик. Таймера нет."
+	tutorial_continue.disabled = not tutorial_done
+
+func _finish_tutorial() -> void:
+	if not tutorial_done: return
+	tutorial_seen = true
+	tutorial.hide()
+	checkpoint_changed.emit(_snapshot())
 
 func _render() -> void:
 	if not is_instance_valid(prompt_label): return

@@ -1,6 +1,11 @@
 extends Control
 
 const UIButtons = preload("res://scripts/ui_buttons.gd")
+const CALL_AVATARS := {
+	"workersgoincrazy@outlook.com": preload("res://assets/ui/call_avatars/worker_drx.png"),
+	"mlff": preload("res://assets/ui/call_avatars/mlff.png"),
+	"Палыч": preload("res://assets/ui/call_avatars/palych.png"),
+}
 
 ## Reusable visual-novel dialogue widget.
 ## Entries are dictionaries with speaker_id, speaker, emotion, side, text and
@@ -44,6 +49,7 @@ var phone_chat_mode := false
 var phone_call_mode := false
 var phone_call_caller := ""
 var phone_call_discord := false
+var _call_avatar: TextureRect
 var current_clock_text := "03:48"
 
 const PHONE_RECT := Rect2(328, 28, 304, 484)
@@ -57,6 +63,7 @@ func _ready() -> void:
 	focus_mode = Control.FOCUS_ALL
 	_create_portrait_slots()
 	_create_dialogue_controls()
+	_create_call_avatar()
 	hide()
 
 func _notification(what: int) -> void:
@@ -80,6 +87,9 @@ func _draw() -> void:
 	if not visible:
 		return
 	if phone_chat_mode:
+		if phone_call_mode:
+			_draw_phone_call()
+			return
 		draw_rect(Rect2(Vector2.ZERO, LOGICAL_SIZE), Color(0.025, 0.018, 0.055, 0.34))
 		var phone := UIButtons.panel_box()
 		draw_style_box(phone, PHONE_RECT)
@@ -111,6 +121,44 @@ func _draw() -> void:
 		return
 	# Keep the room legible while the textured VN window sits above the portraits.
 	draw_rect(Rect2(Vector2.ZERO, LOGICAL_SIZE), Color(0.025, 0.018, 0.055, 0.22))
+
+func _draw_phone_call() -> void:
+	# The call uses the same rounded shell and notch as the room phone. Discord
+	# keeps its own dark charcoal and blurple accents inside that shell.
+	draw_rect(Rect2(Vector2.ZERO, LOGICAL_SIZE), Color(0.025, 0.018, 0.055, 0.43))
+	var shell := StyleBoxFlat.new()
+	shell.bg_color = Color("77708d")
+	shell.set_corner_radius_all(29)
+	draw_style_box(shell, PHONE_RECT)
+	var screen := StyleBoxFlat.new()
+	screen.bg_color = Color("1e1f22") if phone_call_discord else Color("111522")
+	screen.set_corner_radius_all(24)
+	draw_style_box(screen, Rect2(333, 33, 294, 474))
+	var notch := StyleBoxFlat.new()
+	notch.bg_color = Color("393944")
+	notch.set_corner_radius_all(4)
+	draw_style_box(notch, Rect2(445, 37, 70, 7))
+	var font := ThemeDB.fallback_font
+	draw_string(font, Vector2(351, 62), current_clock_text, HORIZONTAL_ALIGNMENT_LEFT, 90, 11, Color("cbc9d3"))
+	draw_string(font, Vector2(539, 62), "● ● ●  ▰", HORIZONTAL_ALIGNMENT_RIGHT, 67, 10, Color("cbc9d3"))
+	if phone_call_discord:
+		draw_circle(Vector2(356, 86), 10, Color("5865f2"))
+		draw_circle(Vector2(352, 86), 1.6, Color.WHITE)
+		draw_circle(Vector2(360, 86), 1.6, Color.WHITE)
+		draw_string(font, Vector2(373, 91), "Discord", HORIZONTAL_ALIGNMENT_LEFT, 120, 15, Color("f3f4fb"))
+	else:
+		draw_string(font, Vector2(350, 91), "ТЕЛЕФОН", HORIZONTAL_ALIGNMENT_LEFT, 200, 12, Color("d9d5e4"))
+	var avatar_back := Color("343648") if phone_call_discord else Color("30273d")
+	draw_circle(Vector2(480, 153), 49, avatar_back)
+	draw_arc(Vector2(480, 153), 50, 0.0, TAU, 64, Color("858cf4") if phone_call_discord else Color("b494ca"), 2.0)
+	draw_string(font, Vector2(350, 219), phone_call_caller, HORIZONTAL_ALIGNMENT_CENTER, 260, 11 if phone_call_discord else 16, Color("f2edf7"))
+	draw_string(font, Vector2(350, 239), "ГОЛОСОВОЙ ВЫЗОВ" if phone_call_discord else "ВХОДЯЩИЙ ЗВОНОК", HORIZONTAL_ALIGNMENT_CENTER, 260, 10, Color("aeb2c6"))
+	var bubble := StyleBoxFlat.new()
+	bubble.bg_color = Color("2b2d36") if phone_call_discord else Color("292534")
+	bubble.set_corner_radius_all(10)
+	draw_style_box(bubble, _phone_bubble_rect())
+	draw_line(Vector2(353, 454), Vector2(607, 454), Color("52515e"), 1.0)
+	draw_string(font, Vector2(354, 451), "РАЗГОВОР", HORIZONTAL_ALIGNMENT_LEFT, 180, 9, Color("aeb2c6"))
 
 func _create_portrait_slots() -> void:
 	var shadow_shader := Shader.new()
@@ -237,9 +285,61 @@ func _create_dialogue_controls() -> void:
 	_counter.add_theme_color_override("font_color", Color("d8b47d"))
 	_counter.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_counter)
+	# The dialogue array contains branches the player never sees. A line number
+	# based on the full array falsely suggests a linear, much longer conversation.
+	# Chapter/location context is already shown by the HUD, so omit this counter.
+	_counter.hide()
+
+func _create_call_avatar() -> void:
+	_call_avatar = TextureRect.new()
+	_call_avatar.name = "CallAvatar"
+	_call_avatar.position = Vector2(437, 110)
+	_call_avatar.size = Vector2(86, 86)
+	_call_avatar.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_call_avatar.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_call_avatar.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_call_avatar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var mask := ShaderMaterial.new()
+	mask.shader = preload("res://assets/ui/phone_avatar.gdshader")
+	_call_avatar.material = mask
+	add_child(_call_avatar)
+	_call_avatar.hide()
 
 func _apply_button_style(button: Button, normal_color: Color, hover_color: Color, pressed_color: Color) -> void:
 	UIButtons.apply(button)
+
+func _style_call_continue() -> void:
+	var discord := phone_call_discord
+	var base := StyleBoxFlat.new()
+	base.bg_color = Color("454d91") if discord else Color("513c65")
+	base.border_color = Color("8990cf") if discord else Color("a385b7")
+	base.set_border_width_all(1)
+	base.set_corner_radius_all(9)
+	base.shadow_color = Color(0.01, 0.01, 0.03, 0.48)
+	base.shadow_size = 4
+	base.shadow_offset = Vector2(0, 2)
+	var hover := base.duplicate() as StyleBoxFlat
+	hover.bg_color = Color("5963af") if discord else Color("67507c")
+	hover.border_color = Color("b4bbf2") if discord else Color("d2b5df")
+	var pressed := base.duplicate() as StyleBoxFlat
+	pressed.bg_color = Color("333b76") if discord else Color("392a4d")
+	pressed.shadow_size = 1
+	pressed.shadow_offset = Vector2.ZERO
+	_continue.add_theme_stylebox_override("normal", base)
+	_continue.add_theme_stylebox_override("hover", hover)
+	_continue.add_theme_stylebox_override("pressed", pressed)
+	_continue.add_theme_stylebox_override("focus", hover)
+	_continue.add_theme_color_override("font_color", Color("f5f1fb"))
+	_continue.add_theme_color_override("font_hover_color", Color.WHITE)
+	_continue.add_theme_color_override("font_pressed_color", Color("e2ddf2"))
+	_continue.add_theme_font_size_override("font_size", 14)
+
+func _reset_continue_style() -> void:
+	for state in ["normal", "hover", "pressed", "focus"]:
+		_continue.remove_theme_stylebox_override(state)
+	for state in ["font_color", "font_hover_color", "font_pressed_color"]:
+		_continue.remove_theme_color_override(state)
+	_continue.add_theme_font_size_override("font_size", 15)
 
 func start(new_entries: Array, start_index: int = 0) -> void:
 	entries = new_entries.duplicate(true)
@@ -253,6 +353,8 @@ func set_phone_chat_mode(enabled: bool) -> void:
 	phone_call_caller = ""
 	phone_call_discord = false
 	phone_chat_mode = enabled
+	_reset_continue_style()
+	_call_avatar.hide()
 	if is_instance_valid(_dialogue_window_layer):
 		_dialogue_window_layer.visible = not enabled
 	queue_redraw()
@@ -265,6 +367,12 @@ func set_phone_call_mode(caller: String, discord: bool) -> void:
 	phone_call_caller = caller
 	phone_call_discord = discord
 	phone_chat_mode = phone_call_mode
+	if phone_call_mode:
+		_style_call_continue()
+	else:
+		_reset_continue_style()
+	_call_avatar.texture = CALL_AVATARS.get(caller) if phone_call_mode else null
+	_call_avatar.visible = phone_call_mode and _call_avatar.texture != null
 	if is_instance_valid(_dialogue_window_layer):
 		_dialogue_window_layer.visible = not phone_chat_mode
 	queue_redraw()
@@ -277,6 +385,8 @@ func set_clock_text(value: String) -> void:
 	queue_redraw()
 
 func _phone_bubble_rect() -> Rect2:
+	if phone_call_mode:
+		return Rect2(343, 254, 274, 184)
 	if str(current_entry().get("speaker_id", "narrator")) == "grat":
 		return Rect2(384, 138, 233, 168)
 	return Rect2(343, 138, 274, 168)
@@ -304,8 +414,8 @@ func _layout_current_line() -> void:
 		_choice_layer.size = Vector2(276, 164)
 		_choice_layer.clip_contents = true
 		_choice_layer.add_theme_constant_override("separation", 5)
-		_continue.position = Vector2(348, 463)
-		_continue.size = Vector2(264, 32)
+		_continue.position = Vector2(360, 461) if phone_call_mode else Vector2(348, 463)
+		_continue.size = Vector2(240, 36) if phone_call_mode else Vector2(264, 32)
 		_hint.position = Vector2(346, 495)
 		_hint.size = Vector2(268, 15)
 		_hint.add_theme_font_size_override("font_size", 10)
@@ -437,7 +547,7 @@ func _load_line() -> void:
 	_text.visible_characters = 0
 	character_progress = 0.0
 	revealing = true
-	_counter.text = "%d / %d" % [index + 1, entries.size()] if phone_chat_mode else "Реплика %d / %d" % [index + 1, entries.size()]
+	_counter.text = ""
 	_hint.text = "E / Enter — показать реплику · ещё раз — продолжить"
 	_hint.visible = not phone_chat_mode
 	_update_portraits(entry)
@@ -608,11 +718,18 @@ func _set_portrait(side: String, data: Dictionary, active: bool) -> void:
 	var portrait: TextureRect = slots[0]
 	var spare: TextureRect = slots[1]
 	var speaker_id := str(data.get("speaker_id", ""))
+	var display_size := Vector2(PORTRAIT_SIZE.x, 258.0) if speaker_id == "artrey" else PORTRAIT_SIZE
+	portrait.size = display_size
+	spare.size = display_size
+	portrait.pivot_offset = display_size * 0.5
+	spare.pivot_offset = display_size * 0.5
 	# Grok's lower edge sits exactly on the dialogue panel's upper border.
-	var layout_position := Vector2(18 if side == "left" else 650, PANEL_RECT.position.y - PORTRAIT_SIZE.y if speaker_id == "grok" else PORTRAIT_TOP)
+	var layout_position := Vector2(18 if side == "left" else 650, PANEL_RECT.position.y - display_size.y if speaker_id in ["grok", "artrey"] else PORTRAIT_TOP)
 	portrait.position = layout_position
 	spare.position = layout_position
 	var silhouette: TextureRect = _silhouette_shadows[side]
+	silhouette.size = display_size
+	silhouette.pivot_offset = display_size * 0.5
 	silhouette.position = layout_position + Vector2(0, 7)
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
 	spare.stretch_mode = portrait.stretch_mode
@@ -625,7 +742,7 @@ func _set_portrait(side: String, data: Dictionary, active: bool) -> void:
 		silhouette.texture = texture
 		silhouette.modulate.a = 1.0
 		var fitted_height := PORTRAIT_SIZE.x * texture.get_height() / texture.get_width()
-		portrait.position.y = maxf(PANEL_RECT.position.y - fitted_height, 0.0)
+		portrait.position.y = PANEL_RECT.position.y - display_size.y if speaker_id == "artrey" else maxf(PANEL_RECT.position.y - fitted_height, 0.0)
 		spare.position.y = portrait.position.y
 		silhouette.position = portrait.position + Vector2(0, 7)
 	if texture == null:
@@ -646,17 +763,35 @@ func _set_portrait(side: String, data: Dictionary, active: bool) -> void:
 		portrait.modulate = Color(0.96, 0.96, 0.98, 1.0)
 	else:
 		var atlas_texture := texture as AtlasTexture
-		var source_size := atlas_texture.atlas.get_size()
-		var region := atlas_texture.region
-		var region_padding := Vector2.ONE / source_size
-		var inactive_material := _inactive_materials[side] as ShaderMaterial
-		inactive_material.set_shader_parameter("region_uv_min", region.position / source_size + region_padding)
-		inactive_material.set_shader_parameter("region_uv_max", region.end / source_size - region_padding)
-		portrait.material = inactive_material
+		if atlas_texture != null:
+			var source_size := atlas_texture.atlas.get_size()
+			var region := atlas_texture.region
+			var region_padding := Vector2.ONE / source_size
+			var inactive_material := _inactive_materials[side] as ShaderMaterial
+			inactive_material.set_shader_parameter("region_uv_min", region.position / source_size + region_padding)
+			inactive_material.set_shader_parameter("region_uv_max", region.end / source_size - region_padding)
+			portrait.material = inactive_material
+		else:
+			portrait.material = null
 		portrait.modulate = Color(0.88, 0.88, 0.92, 1.0)
 	_slot_active[side] = active
 
 func _portrait_texture(speaker_id: String, emotion: String, side: String) -> Texture2D:
+	if speaker_id == "artrey":
+		var artrey_sheet := load("res://assets/portraits/artrey-emotions.png") as Texture2D
+		if artrey_sheet == null:
+			return null
+		var expression := EMOTIONS.find(emotion)
+		if expression < 0:
+			expression = 0
+		var cell := artrey_sheet.get_size() / Vector2(4.0, 2.0)
+		var column := expression % 4
+		var row := 1 if expression >= 4 else 0
+		var artrey_frame := AtlasTexture.new()
+		artrey_frame.atlas = artrey_sheet
+		artrey_frame.region = Rect2(Vector2(column, row) * cell + Vector2(3, 3), cell - Vector2(6, 6))
+		artrey_frame.filter_clip = true
+		return artrey_frame
 	if speaker_id not in ["grat", "grok", "jbt"]:
 		return null
 	if emotion not in EMOTIONS:

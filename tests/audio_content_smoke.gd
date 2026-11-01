@@ -40,4 +40,7 @@ func run() -> void:
 	inspect_stream("res://assets/audio/wire_puzzle_ost.ogg")
 	inspect_stream("res://assets/audio/file_investigation_ost.ogg")
 	inspect_stream("res://assets/audio/queue_and_trial_ost.ogg")
+	inspect_stream("res://assets/audio/doodle_jump_ost.ogg")
+	inspect_stream("res://assets/audio/hotdog_master_ost.ogg")
+	inspect_stream("res://assets/audio/old_projects_ost.ogg")
 	quit()

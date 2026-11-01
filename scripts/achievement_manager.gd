@@ -48,7 +48,8 @@ const DEFINITIONS: Array[Dictionary] = [
 	{"id":"call_drx", "name":"звонок workersgoincrazy@outlook.com", "description":"Дослушать загадочное предложение воркать DRX.", "category":"Сюжет", "icon":"☎", "secret":true},
 	{"id":"call_tables", "name":"звонок mlff", "description":"Узнать о перспективной работе со столами.", "category":"Сюжет", "icon":"☎", "secret":true},
 	{"id":"call_palych", "name":"звонок Палыч", "description":"Согласиться на работу в Wildberries.", "category":"Сюжет", "icon":"☎", "secret":true},
-	{"id":"doodle_jump_found", "name":"Пуск в облака", "description":"Найти и запустить секретную игру на компьютере Грата.", "category":"Мини-игры", "icon":"↑"}
+	{"id":"doodle_jump_found", "name":"Пуск в облака", "description":"Найти и запустить секретную игру на компьютере Грата.", "category":"Мини-игры", "icon":"↑"},
+	{"id":"hotdog_order", "name":"Заказ принят", "description":"Заказать хот-дог в киоске «Хот-дог Мастер».", "category":"Артрей", "icon":"★"}
 ]
 
 var unlocked: Dictionary = {}
@@ -74,7 +75,8 @@ func get_icon(achievement_id: String, hide_secret: bool = false) -> Texture2D:
 		"call_drx": "res://assets/ui/achievements/call-drx.png",
 		"call_tables": "res://assets/ui/achievements/call-tables.png",
 		"call_palych": "res://assets/ui/achievements/call-palych.png",
-		"doodle_jump_found": "res://assets/ui/achievements/doodle-jump.png"
+		"doodle_jump_found": "res://assets/ui/achievements/doodle-jump.png",
+		"hotdog_order": "res://assets/ui/achievements/hotdog-order.png"
 	}
 	if not should_hide and special_icons.has(achievement_id):
 		return load(str(special_icons[achievement_id])) as Texture2D
@@ -90,7 +92,7 @@ func get_icon(achievement_id: String, hide_secret: bool = false) -> Texture2D:
 	var size := Vector2(_icon_atlas.get_width(), _icon_atlas.get_height()) / 6.0
 	var texture := AtlasTexture.new()
 	texture.atlas = _icon_atlas
-	texture.region = Rect2(Vector2(cell % 6, cell / 6) * size, size)
+	texture.region = Rect2(Vector2(cell % 6, floori(float(cell) / 6.0)) * size, size)
 	return texture
 
 func _ready() -> void:
@@ -162,6 +164,10 @@ func reset_achievement(achievement_id: String) -> bool:
 	if not _catalog_by_id.has(achievement_id) or not unlocked.has(achievement_id):
 		return false
 	unlocked.erase(achievement_id)
+	if achievement_id in ["grok_good_ending", "jbt_good_ending", "artbay_good_ending", "artbay_bad_ending", "neutral_ending", "team_ending", "instrumental_ending"]:
+		unlocked.erase("all_endings")
+	if achievement_id != "platinum":
+		unlocked.erase("platinum")
 	if not _save_progress():
 		push_warning("Не удалось сохранить сброс достижения: " + achievement_id)
 	achievements_changed.emit()

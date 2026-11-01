@@ -142,6 +142,153 @@ static func artrey_intro() -> Array:
 	entries[10]["choices"] = [S.choice("Давай составим план","artrey_accept","accept"),S.choice("Да, но авторство за мной","artrey_terms","terms"),S.choice("Хочу пока поработать один","artrey_refuse","refuse")]
 	return S.compile(entries)
 
+static func hotdog_first_chat(state: Dictionary = {}) -> Array:
+	var has_notes := bool(state.get("old_project_notes_found",false))
+	var remembered_line := "Ты уже нашёл заметки из старого проекта? Значит, правда хочешь довести эту историю до конца." if has_notes else "Покажешь, что уже работает? Не презентацию — саму игру."
+	var entries: Array = [
+		S.line("narrator","neutral","После BIOS вы выходите на улицу. У киоска «Хот-дог Мастер» Артрей уже стоит у окна и держит два чека."),
+		S.line("artrey","happy","Я заказал как обычно. Они спросили, что именно это значит. Третий год подряд спрашивают."),
+		S.line("grat","happy","Зато одна постоянная вещь у тебя в жизни есть."),
+		S.line("artrey","neutral","Не считая тебя, который каждый год обещает доделать игру?"),
+		S.line("grat","embarrassed","Я сегодня хотя бы получил ключ. Текстовый. До настоящего ещё один шаг и несколько месяцев, видимо."),
+		S.line("artrey","happy","Это уже лучше, чем папка «финал_точно_последний»."),
+		S.line("narrator","neutral",remembered_line),
+		S.line("artrey","neutral","Я помню старую комнату и эту дверь. Могу помочь выбрать маленькую следующую задачу. Пароли и полный доступ для этого не нужны."),
+		S.line("grat","neutral","Ладно. Только сначала поедим. Я не умею принимать решения на голодный желудок."),
+		S.line("artrey","happy","Уже взял два — себе и на потом. Ты себе выбери у окна. На этот раз один из моих даже хот-дог."),
+		S.line("artrey","neutral","Что дальше с игрой?","offer"),
+		S.line("artrey","happy","Хорошо. Выберем одну задачу и проверим её на маленькой сборке.","accept","ready"),
+		S.line("artrey","neutral","Согласен. Авторство и границы доступа остаются твоими; мою помощь запишем отдельно.","terms","ready"),
+		S.line("artrey","neutral","Понял. Сегодня без плана. Когда будет что показать — позови.","refuse","end"),
+		S.line("grat","happy","Спасибо. Показывай свою салфетку с бизнес-планом.","ready","brainstorm"),
+		S.line("artrey","happy","Салфетка одна. Идей семь. Выберем три и решим, с чего начать.","brainstorm")
+	]
+	entries[10]["choices"] = [
+		S.choice("Показать прототип и выбрать один маленький шаг","artrey_accept","accept"),
+		S.choice("Обсудить роли и доступ до совместной работы","artrey_terms","terms"),
+		S.choice("Сегодня просто поесть, к проекту вернуться позже","artrey_refuse","refuse")
+	]
+	return S.compile(entries, "artrey")
+
+static func hotdog_taste(item_id: String = "master") -> Array:
+	var entries: Array = []
+	match item_id:
+		"single":
+			entries = [
+				S.line("narrator","neutral","Грат берёт одинарный хот-дог. Продавец заворачивает его в пакет с надписью «сегодня точно свежий»."),
+				S.line("grat","happy","Классика. Даже название не пытается меня удивить."),
+				S.line("artrey","happy","Смелый выбор. Здесь и обычная сосиска иногда с сюжетом."),
+				S.line("narrator","neutral","Грат откусывает. Соус хрустит, хотя лука в меню нет."),
+				S.line("grat","surprised","Подожди. Если это классика, почему соус звучит как клавиатура?"),
+				S.line("artrey","neutral","Отложи пока. Я спрошу у продавца, что он туда положил.")
+			]
+		"double":
+			entries = [
+				S.line("narrator","neutral","Грат заказывает двойной. Из булки торчат две сосиски и половина салфетки."),
+				S.line("grat","happy","Вот это архитектура. Держится на честном слове и горчице."),
+				S.line("artrey","happy","Только не урони. Мои два пока целые."),
+				S.line("narrator","neutral","Грат откусывает. Под второй сосиской обнаруживается тот же хрустящий соус."),
+				S.line("grat","surprised","Почему хрустит не сосиска, а соус?"),
+				S.line("artrey","neutral","Хороший вопрос. Второй укус отложим до ответа.")
+			]
+		"signature":
+			entries = [
+				S.line("narrator","neutral","Грат выбирает фирменный хот-дог. Продавец щедро добавляет секретный соус."),
+				S.line("grat","happy","Секретный рецепт? Надеюсь, секрет хотя бы съедобный."),
+				S.line("artrey","neutral","У меня в пакете два обычных. Сравним, когда попробуешь."),
+				S.line("narrator","neutral","Грат откусывает. Соус неожиданно хрустит."),
+				S.line("grat","surprised","Я понял секрет: он издаёт звук. Так и задумано?"),
+				S.line("artrey","neutral","Лучше пока не проверяй второй раз.")
+			]
+		_:
+			entries = [
+				S.line("narrator","neutral","Грат берёт у окна «Мастер сосиску». Бумажный пакет подозрительно тёплый."),
+				S.line("grat","happy","За девяносто девять рублей она должна хотя бы знать мой пароль от Wi-Fi."),
+				S.line("artrey","happy","Не говори ей пароль. Сначала проверь, что она съедобная."),
+				S.line("narrator","neutral","Грат откусывает. Соус хрустит."),
+				S.line("grat","surprised","Стой. Соус не должен хрустеть. Что там внутри?"),
+				S.line("artrey","neutral","Может, лук? Ты пока не делай второй укус.")
+			]
+	return S.compile(entries, "artrey")
+
+static func hotdog_poisoning(refused_plan: bool = false, item_id: String = "master") -> Array:
+	var order_name: String = str({"single":"Одинарный", "double":"Двойной", "master":"Мастер сосиска", "signature":"Фирменный"}.get(item_id,"Мастер сосиска"))
+	var entries: Array = [
+		S.line("narrator","neutral","Через минуту Грата мутит. Он садится на лавку и откладывает хот-дог."),
+		S.line("grat","afraid","В животе будто запустилась сборка без кнопки «Отмена»."),
+		S.line("artrey","sad","Продавец сказал, что соус у всех один. Держи воду. Если не отпустит — пойдём за помощью."),
+		S.line("grat","neutral","Отпускает. Но «%s» теперь мой главный баг-репорт." % order_name),
+	]
+	if refused_plan:
+		entries.append(S.line("artrey","neutral","Мои два я пока не трону. До дома дойдёшь? Про игру сегодня не спрашиваю."))
+		entries.append(S.line("grat","happy","Дойду. А завтра открою проект сам. Хот-догам доступ к папке не дам."))
+	else:
+		entries.append(S.line("artrey","happy","Мои два я пока не трону. С игрой что делаем? Только короткий план, без героизма."))
+		entries.append(S.line("grat","happy","Давай. Сначала один рабочий шаг. И копию проекта — отдельно от хот-догов."))
+	return S.compile(entries, "artrey")
+
+static func hotdog_repeat_visit(state: Dictionary = {}) -> Array:
+	var suspicion := int(state.get("artbay_suspicion",0))
+	var entries: Array = []
+	if bool(state.get("artbay_betrayal",false)):
+		if bool(state.get("artbay_repaired",false)):
+			entries = [
+				S.line("artrey","sad","Я разослал исправленную презентацию. Твоё авторство стоит первым. Мой план продвижения отмечен отдельно."),
+				S.line("grat","neutral","Покажи письма. Договор не вернёт доверие за один вечер, но теперь хотя бы ясно, что ты исправил."),
+				S.line("artrey","neutral","Покажу. И логин останется у тебя. Сегодня я отвечаю за свои ошибки, не за твою игру.")
+			]
+		elif bool(state.get("artbay_control_taken",false)):
+			entries = [
+				S.line("grat","angry","Ты обещал исправить имя. В опубликованной копии его всё ещё нет."),
+				S.line("artrey","sad","Я хотел успеть к питчу и снова выбрал за тебя. Не прошу считать это помощью."),
+				S.line("grat","neutral","Мою резервную копию ты не получишь. Теперь у каждого из нас свой релиз.")
+			]
+		elif bool(state.get("artbay_contract_signed",false)):
+			entries = [
+				S.line("artrey","sad","Я подготовил исправление к презентации, но у нас всё ещё нет полной истории файлов."),
+				S.line("grat","neutral","Пока не будет доказательств и новой страницы с моим именем, договор не вступит в силу."),
+				S.line("artrey","neutral","Понял. Сначала покажу исправления, потом вернёмся к подписи.")
+			]
+		else:
+			entries = [
+				S.line("artrey","sad","Я удалил питч. Получателям отправил исправление: игру сделал ты, я помогал с планом."),
+				S.line("grat","neutral","Хорошо. Это не приглашение снова работать вместе."),
+				S.line("artrey","neutral","Понимаю. Сегодня просто верну твою флешку.")
+			]
+	elif suspicion > 0 and bool(state.get("hotdog_suspicion_choice_seen",false)):
+		entries = [
+			S.line("grat","neutral","Историю копии я проверю сам. Разговор у киоска не сделал даты в файлах понятнее."),
+			S.line("artrey","sad","Я принесу исходную версию. Но после того, что ты увидел, обещаний мало — сравни файлы."),
+			S.line("grat","neutral","Да. Сначала факты, потом решения о нас и о проекте.")
+		]
+	elif suspicion > 0:
+		entries = [
+			S.line("grat","neutral","Ты говорил, что только смотришь копию. Почему в черновике презентации автором стоит твоё имя?"),
+			S.line("artrey","embarrassed","Я поставил заглушку для питча. Надо было показать тебе до отправки."),
+			S.line("grat","neutral","Что мне сделать сейчас?","choice"),
+			S.line("artrey","sad","Проверяй историю. Словами я уже не докажу, когда и что менял.","check","end"),
+			S.line("artrey","neutral","Я сам принесу старую копию. Но решение о доступе оставь за собой.","wait","end"),
+			S.line("grat","neutral","Вернусь к файлам. Не к обещаниям.","end")
+		]
+		entries[2]["choices"] = [S.choice("Проверить историю копии самому","hotdog_check","check"),S.choice("Попросить Артрея принести исходную версию","hotdog_wait","wait")]
+	elif bool(state.get("hotdog_trust_choice_seen",false)):
+		entries = [
+			S.line("artrey","happy","Два хот-дога. Проект сегодня открывать будем?"),
+			S.line("grat","neutral","Сначала поем. Потом покажу, что изменилось после нашего разговора."),
+			S.line("artrey","neutral","Вот теперь мы точно похожи на друзей, а не на план релиза.")
+		]
+	else:
+		entries = [
+			S.line("artrey","happy","Как обычно? На этот раз продавец узнал меня. Правда, спросил, кто ты."),
+			S.line("grat","happy","Скажи: человек, у которого впервые запускается собственная игра."),
+			S.line("artrey","neutral","Покажешь сборку или сегодня просто поедим?","choice"),
+			S.line("artrey","happy","Вот здесь дверь открывается. Помнишь, раньше она улетала вместе с игроком? Я помогу проверить короткий трейлер.","show","end"),
+			S.line("artrey","neutral","Тоже план. Дружить можно и без общего документа с задачами.","rest","end"),
+			S.line("grat","neutral","Хорошо. К файлам вернёмся, когда я сам буду готов.","end")
+		]
+		entries[2]["choices"] = [S.choice("Показать рабочую сборку, но оставить доступ у себя","hotdog_show","show"),S.choice("Сегодня просто поговорить без проекта","hotdog_rest","rest")]
+	return S.compile(entries, "artrey")
+
 static func show_blender_game(g: Variant) -> void:
 	if g.minigame_checkpoint.get("kind", "") != "blender":
 		g.minigame_checkpoint = {"kind":"blender","stage":0,"errors":0,"notice":"Ошибаться можно. Это учебная сцена, без таймера."}
@@ -215,7 +362,7 @@ static func show_brainstorm(g: Variant) -> void:
 		var keys: Array = ideas.keys()
 		for i in range(keys.size()):
 			var identifier: String = str(keys[i])
-			g.button_at(g.app_panel,("✓ " if picks.has(identifier) else "□ ")+str(ideas[identifier]),Vector2(28+(i%2)*350,125+(i/2)*43),Vector2(338,37),func():
+			g.button_at(g.app_panel,("✓ " if picks.has(identifier) else "□ ")+str(ideas[identifier]),Vector2(28+(i%2)*350,125+floori(float(i)/2.0)*43),Vector2(338,37),func():
 				if picks.has(identifier): picks.erase(identifier)
 				elif picks.size()<3: picks.append(identifier)
 				g.minigame_checkpoint.picks = picks

@@ -33,13 +33,14 @@ func _ready() -> void:
 	_build_menu()
 	_build_settings()
 	_build_achievements()
-	_build_dev_chapter_picker()
+	if OS.is_debug_build():
+		_build_dev_chapter_picker()
 	AchievementManager.achievements_changed.connect(_refresh_achievements_if_open)
 	AudioManager.set_walking(false)
 	AudioManager.stop_pc_sfx()
 	AudioManager.play_music("menu")
 	_refresh_continue()
-	if SaveManager.consume_dev_picker_reopen():
+	if OS.is_debug_build() and SaveManager.consume_dev_picker_reopen():
 		_open_dev_chapter_picker()
 
 func _build_background() -> void:
@@ -107,7 +108,8 @@ func _build_menu() -> void:
 	_menu_button(button_stack, "Мои достижения", _open_achievements)
 	_menu_button(button_stack, "Настройки", _open_settings)
 	_menu_button(button_stack, "Выйти из игры", _exit_pressed)
-	_menu_button(button_stack, "Инструменты разработчика", _open_dev_chapter_picker)
+	if OS.is_debug_build():
+		_menu_button(button_stack, "Инструменты разработчика", _open_dev_chapter_picker)
 	status_label = Label.new()
 	status_label.custom_minimum_size.y = 38
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -253,6 +255,7 @@ func _build_dev_chapter_picker() -> void:
 	var categories := [
 		{"id":"chapters", "title":"Главы", "detail":"Прямой запуск главы 1–7"},
 		{"id":"minigames", "title":"Мини-игры", "detail":"Открыть нужную игру сразу"},
+		{"id":"locations", "title":"Локации", "detail":"Открыть отдельную сцену напрямую"},
 		{"id":"calls", "title":"События звонков", "detail":"Вызвать одно тестовое событие"},
 		{"id":"endings", "title":"Финалы и титры", "detail":"Проверить концовки и скролл титров"},
 		{"id":"achievements", "title":"Достижения", "detail":"Выдать по одному и проверить уведомление"}
@@ -290,6 +293,7 @@ func _build_dev_chapter_picker() -> void:
 
 	_build_dev_chapters_page()
 	_build_dev_minigames_page()
+	_build_dev_locations_page()
 	_build_dev_calls_page()
 	_build_dev_endings_picker()
 	_build_dev_achievements_page()
@@ -366,13 +370,21 @@ func _build_dev_chapters_page() -> void:
 func _build_dev_minigames_page() -> void:
 	_create_dev_page("minigames", "DEV · ПРЯМОЙ ЗАПУСК МИНИ-ИГР", "Откроется указанная мини-игра без прохождения главы.")
 	var minigames := [
+		{"id":"doodle_jump", "title":"Прыжки Грата · Пуск"},
 		{"id":"tab_war", "title":"Война вкладок"},
 		{"id":"wire_puzzle", "title":"Провода · Последняя сборка"},
-		{"id":"digital_archaeology", "title":"Цифровая археология"},
 		{"id":"office_queue", "title":"Очередь · Окошко 404"},
 		{"id":"court_trial", "title":"Судья-принтер"}
 	]
 	_add_dev_grid("minigames", minigames, _launch_dev_minigame, "DevMinigame_")
+
+func _build_dev_locations_page() -> void:
+	_create_dev_page("locations", "DEV · ПРЯМОЙ ЗАПУСК ЛОКАЦИИ", "Откроется игровая сцена с управлением, паузой и разговором.")
+	var locations := [
+		{"id":"hotdog_master", "title":"Киоск · Артрей / Хот-дог Мастер"},
+		{"id":"digital_archaeology", "title":"Старые проекты · глава 6"}
+	]
+	_add_dev_grid("locations", locations, _launch_dev_minigame, "DevLocation_")
 
 func _build_dev_calls_page() -> void:
 	_create_dev_page("calls", "DEV · СОБЫТИЯ ЗВОНКОВ", "Запуск звонка не требует ждать случайного расписания.")
@@ -738,10 +750,10 @@ func _close_settings() -> void:
 	continue_button.grab_focus()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel") and dev_active_page != "home" and dev_page_panels.has(dev_active_page) and (dev_page_panels[dev_active_page] as Control).visible:
+	if OS.is_debug_build() and event.is_action_pressed("ui_cancel") and dev_active_page != "home" and dev_page_panels.has(dev_active_page) and (dev_page_panels[dev_active_page] as Control).visible:
 		_return_dev_to_hub()
 		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("ui_cancel") and dev_chapter_panel.visible:
+	elif OS.is_debug_build() and event.is_action_pressed("ui_cancel") and is_instance_valid(dev_chapter_panel) and dev_chapter_panel.visible:
 		_close_dev_chapter_picker()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_cancel") and achievements_panel.visible:

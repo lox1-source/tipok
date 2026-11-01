@@ -10,18 +10,21 @@ func drive_dialogue(game: Variant) -> void:
 	var guard := 0
 	while game.dialogue_open and guard < 200:
 		guard += 1
-		game.vn.advance()
+		if game.vn.is_revealing(): game.vn.advance()
+		elif not game.vn.choice_buttons.is_empty(): game.vn.select_choice(0)
+		else: game.vn.advance()
 	check(guard < 200,"Dialogue terminates")
 func run() -> void:
 	var model = load("res://scripts/tab_war_state.gd").new()
 	model.start("grok")
 	check(model.count("grok") == 4 and model.count("jbt") == 6,"Both sides have initial tabs")
-	check(model.spawn_own() == 2,"Well-timed press creates two tabs")
+	check(model.spawn_own() == 1,"Opening a tab without charge creates one")
 	check(model.spawn_own() == 0,"Cooldown prevents spamming")
 	model.tick(2.0)
-	check(model.spawn_own() == 1,"Late press opens one tab")
 	var enemy_index: int = model.cells.find(model.enemy())
 	check(model.close_tab(enemy_index) and model.closed_enemy == 1,"Foreign tab close frees a slot")
+	check(model.cleanup_charge == 1 and model.spawn_own() == 2,"Closing a foreign tab powers the next double opening")
+	check(model.cleanup_charge == 0,"Bonus charge is consumed once")
 	check(not model.close_tab(enemy_index),"Closing an empty slot gives no credit")
 	var own_index: int = model.cells.find(model.side)
 	model.close_tab(own_index)
@@ -52,7 +55,7 @@ func run() -> void:
 	check(bot_wins == 12,"Both sides can win across 12 seeds with moderate input")
 	model.start("jbt")
 	for i in range(1801): model.tick(0.1)
-	check(model.phase == "result" and not model.won and model.reason == "timeout","No input reaches a loss at the three-minute deadline")
+	check(model.phase == "result" and not model.won and model.reason == "timeout","No input reaches a loss at the two-minute deadline")
 
 	var achievements: Variant = root.get_node("AchievementManager")
 	var old_path: String = achievements.save_path
@@ -71,6 +74,13 @@ func run() -> void:
 	game._launch_pending_chapter()
 	drive_dialogue(game)
 	check(game.mode == "tab_war" and game.tab_war.state.phase == "select","Chapter introduction opens side selection")
+	check(game.tab_war.tutorial.visible and not game.tab_war.selection.visible,"Training is shown before side selection")
+	for panel in game.tab_war.tutorial.get_children():
+		if panel is Panel:
+			for child in panel.get_children():
+				if child is Button and child.text == "×":
+					child.pressed.emit()
+	check(game.tab_war.tutorial_complete and game.tab_war.selection.visible,"Closing the practice tab unlocks side selection")
 	check(not achievements.has_achievement("tab_war"),"Dialogue alone does not award the minigame achievement")
 	for child in game.tab_war.selection.get_children():
 		if child is Button and child.text.begins_with("2 ·"): child.pressed.emit(); break
@@ -82,7 +92,7 @@ func run() -> void:
 	key.physical_keycode = KEY_SPACE
 	key.pressed = true
 	game.tab_war._unhandled_input(key)
-	check(game.tab_war.state.opened == 2,"Space creates tabs")
+	check(game.tab_war.state.opened == 2,"Space uses the charge from a closed enemy tab")
 	game.tab_war.pause_requested.emit()
 	var paused_elapsed: float = game.tab_war.state.elapsed
 	await create_timer(0.2,true).timeout

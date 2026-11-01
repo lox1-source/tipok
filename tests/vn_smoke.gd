@@ -50,7 +50,10 @@ func run() -> void:
 	var phone_entries: Array = game.Early.artrey_intro()
 	game.flow = "chapter_two_artrey"
 	game._start_dialogue_entries(phone_entries, 1)
-	check(dialogue.phone_chat_mode and not dialogue._dialogue_window_layer.visible, "Artrey phone mode hides the ordinary VN panel")
+	check(not dialogue.phone_chat_mode and dialogue._dialogue_window_layer.visible, "Kiosk conversation uses the ordinary VN panel")
+	game.flow = "artrey_plan_done"
+	game._start_dialogue_entries(phone_entries, 1)
+	check(dialogue.phone_chat_mode and not dialogue._dialogue_window_layer.visible, "Actual Artrey phone mode hides the ordinary VN panel")
 	check(dialogue._silhouette_shadows["left"].texture == null and dialogue._silhouette_shadows["right"].texture == null, "Phone mode has no leftover portrait silhouettes")
 	dialogue.start([{"speaker_id":"grat", "speaker":"Грат", "text":"Проверка длинного ответа.", "choices":[
 		{"text":"1. Сделать копию с авторством и доступом только для чтения, чтобы текст переносился внутри кнопки", "id":"long"},

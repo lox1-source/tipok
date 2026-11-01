@@ -39,6 +39,8 @@ var chapter_one_evidence: Array[String] = []
 var pending_evidence := ""
 var pause_menu: Control
 var phone_panel: Panel
+var phone_notes_open := false
+var phone_avatar_textures: Dictionary = {}
 var phone_hud_hidden := false
 var credits_screen: Control
 var credits_label: RichTextLabel
@@ -57,6 +59,7 @@ var doodle_jump_control: Control
 var office_queue: Control
 var court_trial: Control
 var digital_archaeology: Control
+var hotdog_master: Control
 var last_build: Control
 var hint_panel: Panel
 var task_panel: Panel
@@ -80,16 +83,16 @@ const DIALOGUE_TIME := preload("res://scripts/story_dialogue.gd")
 
 const FLOW := {
 	"intro": [
-		"[b]03:47. КОМНАТА ГРАТА.[/b]\nНа рабочем столе папка «МОЯ ИГРА». Внутри ещё четырнадцать папок. Ни одной игры.",
-		"[b]ГРАТ[/b]\nСегодня точно сделаю. Там делов-то: комната, дверь, ключ. Я вообще по идеям.",
-		"[b]ТЕЛЕФОН[/b]\nСначала надо сообщить друзьям, кто здесь творческий директор. Телефон лежит на тумбочке возле пиццы."
+		"[b]03:47. КОМНАТА ГРАТА.[/b]\nСегодня Грат хочет запустить свою первую игру: комнату с запертой дверью. Осталось сделать ключ.",
+		"[b]ГРАТ[/b]\nКомната есть. Дверь есть. Ключ сделаю сейчас. Я вообще по идеям.",
+		"[b]ТЕЛЕФОН[/b]\nСначала Грат расскажет друзьям о проекте. Телефон лежит на тумбочке возле пиццы."
 	],
 	"voice": [
 		"[b]ГРАТ ЗАПИСЫВАЕТ ГОЛОСОВОЕ[/b]\n«Короче, делаю игру. Авторский проект. Всё сам».\nОн отправляет его в игровой чат друзей.",
 		"[b]ВТОРОЙ МОНИТОР[/b]\nЖБТ: «Теперь нажми “Создать проект”».\nГрат аккуратно сворачивает окно. Чтобы не отвлекало от авторского проекта."
 	],
 	"project": [
-		"[b]МОЯ ИГРА → ЗАПУСК[/b]\nПерсонаж подходит к двери. Дверь не открывается. Зато открывается ошибка.",
+		"[b]МОЯ ИГРА → ЗАПУСК[/b]\nПерсонаж доходит до двери. Она не открывается. На экране появляется ошибка.",
 		"[b][color=#f2a1a1]ERROR: key.glb отсутствует[/color][/b]\nДля продолжения разработки создайте или импортируйте модель ключа.",
 		"[b]ГРАТ[/b]\nОдин сраный ключ. Сейчас сам сделаю. Где тут этот Blender?"
 	],
@@ -99,17 +102,17 @@ const FLOW := {
 	],
 	"help": [
 		"[b]ГРАТ → ЖБТ[/b]\nСделай ключ для игры. Обычный. Чтоб дверь открывал.",
-		"[b]ЖБТ[/b]\nКонечно! Вот Python-скрипт для Blender. Открой вкладку Scripting, вставь код и нажми Run Script.",
-		"[b]ГРАТ[/b]\nАга, вставить код. Понял.\n\nСкрипт скопирован. Грат уже знает идеальное место, куда его вставить."
+		"[b]ЖБТ[/b]\nВот скрипт для Blender. Вставь его во вкладку Scripting и нажми Run Script.",
+		"[b]ГРАТ[/b]\nВставить код. Понял.\nГрат копирует скрипт и открывает поиск Windows."
 	],
 	"search": [
 		"[b]ПОИСК[/b]\nПо вашему запросу ничего не найдено.\nПопробуйте изменить формулировку.",
-		"[b]ГРАТ[/b]\nНе работает. Ты опять хуйню дал.\n\nНужно немедленно сообщить об этом ЖБТ."
+		"[b]ГРАТ[/b]\nНе работает. Ты опять хуйню дала.\nГрат пишет ЖБТ, не проверив, куда вставил код."
 	],
 	"complain": [
-		"[b]ГРАТ → ЖБТ[/b]\nЯ вставил. Ноль результатов. Опять нерабочий код.",
+		"[b]ГРАТ → ЖБТ[/b]\nЯ вставил код. Поиск ничего не нашёл.",
 		"[b]ЖБТ[/b]\nКод нужно запускать в Blender. Это не поисковый запрос.",
-		"[b]ГРАТ[/b]\nВсё, уже не вывозит. Пойду к конкурентам.\n\nОн открывает новую вкладку. Потом возвращается в старую."
+		"[b]ГРАТ[/b]\nЯсно. Это я не туда вставил.\nНо вместо Blender он опять открывает чат ЖБТ."
 	],
 	"prompt": [
 		"[b]ГРАТ → ЖБТ[/b]\nКак написать другой нейросети, чтобы она сделала нормально?",
@@ -219,11 +222,13 @@ func _start_dev_minigame(game_id: String) -> void:
 	chapter_one_stage = 2
 	chapter_two_complete = true
 	match game_id:
+		"doodle_jump": show_doodle_jump()
 		"tab_war": start_tab_war()
 		"wire_puzzle": start_last_build()
 		"digital_archaeology": start_digital_archaeology()
 		"office_queue": start_office_queue()
 		"court_trial": start_court_trial()
+		"hotdog_master": start_hotdog_master()
 
 func _start_dev_ending(ending_id: String) -> void:
 	# Direct previews use disposable story data and must not unlock achievements.
@@ -375,14 +380,16 @@ func _build_ui() -> void:
 	ui_layer.add_child(inventory_panel)
 	phone_panel = Panel.new()
 	phone_panel.name = "FriendsChatPhone"
-	phone_panel.position = Vector2(335,42)
-	phone_panel.size = Vector2(290,455)
+	phone_panel.position = Vector2(320,24)
+	phone_panel.size = Vector2(320,492)
 	phone_panel.z_index = 40
 	var phone_style := StyleBoxFlat.new()
-	phone_style.bg_color = Color("11131c")
-	phone_style.border_color = Color("88739a")
+	phone_style.bg_color = Color("080a11")
+	phone_style.border_color = Color("675b79")
 	phone_style.set_border_width_all(3)
-	phone_style.set_corner_radius_all(22)
+	phone_style.set_corner_radius_all(31)
+	phone_style.shadow_color = Color(0, 0, 0, 0.45)
+	phone_style.shadow_size = 12
 	phone_panel.add_theme_stylebox_override("panel", phone_style)
 	ui_layer.add_child(phone_panel)
 	dialogue_panel = _make_panel(Vector2(100,310),Vector2(760,190),Color("100d1e"),Color("bba0cf"))
@@ -561,6 +568,11 @@ func _create_vn() -> void:
 	vn.choice_selected.connect(_on_achievement_dialogue_choice)
 
 func _on_achievement_dialogue_choice(choice_id: String) -> void:
+	if flow == "hotdog_repeat" and choice_id in ["hotdog_show","hotdog_rest","hotdog_check","hotdog_wait"]:
+		var effects := {"affection_artbay":1} if choice_id == "hotdog_show" else {"artbay_suspicion":1} if choice_id == "hotdog_check" else {}
+		var decision_key := "hotdog_suspicion_choice" if choice_id in ["hotdog_check","hotdog_wait"] else "hotdog_trust_choice"
+		var flags := {"hotdog_repeat_choice_seen":true,"hotdog_suspicion_choice_seen":true,"hotdog_suspicion_action":choice_id} if decision_key == "hotdog_suspicion_choice" else {"hotdog_repeat_choice_seen":true,"hotdog_trust_choice_seen":true}
+		story.decide(decision_key,choice_id,effects,flags)
 	if flow in ["chapter_three_intro", "chapter_three_outro", "chapter_three"]:
 		var effects := {}
 		var flags := {}
@@ -583,7 +595,7 @@ func _on_achievement_dialogue_choice(choice_id: String) -> void:
 			"c4_decline":
 				c4_flags = {"backup_candidate":false}
 			"c4_access":
-				c4_flags = {"project_access_shared":true,"backup_candidate":true}
+				c4_flags = {"project_access_shared":true,"backup_candidate":true,"artbay_suspicion":1}
 		story.decide("chapter_four_backup",choice_id,c4_effects,c4_flags)
 	if flow.begins_with("chapter_five"):
 		var c5_effects := {}
@@ -610,26 +622,30 @@ func _on_achievement_dialogue_choice(choice_id: String) -> void:
 			"c5_jbt_unsure": decision = "court_jbt_question"
 		if decision != "": story.decide(decision,choice_id,c5_effects,c5_flags)
 	if flow.begins_with("chapter_six"):
+		if choice_id in ["c6_companion_grok","c6_companion_jbt","c6_companion_alone"]:
+			var companion := choice_id.trim_prefix("c6_companion_")
+			story.decide("archive_companion",companion,{}, {"old_projects_companion":companion})
 		var c6_flags := {}
 		match choice_id:
 			"c6_contract":
-				c6_flags = {"artbay_contract_signed":true,"artbay_control_taken":false,"artbay_trust":true}
+				c6_flags = {"artbay_contract_signed":true,"artbay_control_taken":false,"artbay_trust":true,"artbay_repaired":bool(story.get_value("artbay_evidence"))}
 				if bool(story.get_value("artbay_evidence")): c6_flags["project_ownership_proven"] = true
 			"c6_cut": c6_flags = {"artbay_control_taken":false,"artbay_contract_signed":false}
+			"c6_defer": c6_flags = {"artbay_control_taken":false,"artbay_contract_signed":false}
 			"c6_trust": c6_flags = {"artbay_control_taken":true,"artbay_contract_signed":false,"project_access_shared":true}
 		if not c6_flags.is_empty():
 			story.decide("chapter_six_resolution",choice_id,{"affection_artbay":1 if choice_id == "c6_contract" else 0},c6_flags)
 	if flow.begins_with("chapter_seven_outro"):
 		var ending_id := ""
 		match choice_id:
-			"c7_grok": ending_id = "grok" if story.get_value("grok_date_completed") and story.get_value("grok_without_key") else "neutral"
-			"c7_jbt": ending_id = "jbt" if story.get_value("gpt_boundaries") else "neutral"
-			"c7_artrey": ending_id = "artbay" if story.get_value("artbay_contract_signed") and story.get_value("project_ownership_proven") else "neutral"
+			"c7_grok": ending_id = "grok" if story.get_value("grok_date_completed") and story.get_value("grok_without_key") and int(story.get_value("affection_grok",0)) >= 3 and int(story.get_value("lies_count",0)) < 2 else "neutral"
+			"c7_jbt": ending_id = "jbt" if story.get_value("gpt_boundaries") and int(story.get_value("affection_gpt",0)) >= 3 and not story.get_value("lied_in_court") else "neutral"
+			"c7_artrey": ending_id = "artbay" if story.get_value("artbay_contract_signed") and story.get_value("project_ownership_proven") and story.get_value("artbay_repaired") else "neutral"
 			"c7_artrey_bad": ending_id = "artbay_bad" if story.get_value("artbay_control_taken") else "neutral"
-			"c7_team": ending_id = "team" if story.get_value("defused_tab_war") else "neutral"
+			"c7_team": ending_id = "team" if story.get_value("defused_tab_war") and not story.get_value("artbay_control_taken") else "neutral"
 			"c7_instrument": ending_id = "instrumental" if int(story.get_value("lies_count",0)) >= 2 or (story.get_value("artbay_control_taken") and story.get_value("lied_in_court")) else "neutral"
 			"c7_ministry": ending_id = "ministry" if story.get_value("secret_protocol") and (story.get_value("stamp_obtained") or story.get_value("stamp_stolen")) else "neutral"
-			"c7_triple": ending_id = "triple" if story.get_value("defused_tab_war") and int(story.get_value("affection_grok",0)) >= 2 and int(story.get_value("affection_gpt",0)) >= 2 and int(story.get_value("affection_artbay",0)) >= 2 else "neutral"
+			"c7_triple": ending_id = "triple" if story.get_value("defused_tab_war") and int(story.get_value("affection_grok",0)) >= 2 and int(story.get_value("affection_gpt",0)) >= 2 else "neutral"
 			"c7_solo": ending_id = "neutral"
 		if ending_id != "":
 			story.set_value("final_ending",ending_id)
@@ -770,7 +786,7 @@ func refresh_goal() -> void:
 		_refresh_hud_visibility()
 		return
 	if active_chapter == 2:
-		goal_label.text = "Глава 2 завершена · key.txt получен" if chapter_two_complete else ("Глава 2 · Артрей ждёт ответа на телефоне" if story.get_value("grok_date_completed") else ("Глава 2 · подойди к компьютеру и открой BIOS" if chapter_computer_pending == 2 else "Глава 2 · свидание в BIOS"))
+		goal_label.text = "Глава 2 завершена · key.txt получен" if chapter_two_complete else ("Глава 2 · составь с Артреем короткий план" if story.get_value("artbay_intro_seen") else "Глава 2 · встреться с Артреем у киоска" if story.get_value("grok_date_completed") else "Глава 2 · подойди к компьютеру и открой BIOS" if chapter_computer_pending == 2 else "Глава 2 · свидание в BIOS")
 		clock_location = "Артрей на связи" if story.get_value("grok_date_completed") else "BIOS"
 		_update_clock_display()
 		_refresh_hud_visibility()
@@ -836,6 +852,7 @@ func resume_game() -> void:
 		pending_evidence = str(checkpoint.get("pending_evidence", ""))
 		mode = "dialogue"
 		if flow == "chapter_two": _build_bios_background()
+		if flow in ["chapter_two_artrey", "hotdog_taste", "hotdog_poisoning", "hotdog_repeat"]: _show_hotdog_background_for_dialogue()
 		_start_dialogue_entries(checkpoint.entries, int(checkpoint.get("index", 0)))
 	elif minigame_checkpoint.get("kind", "") == "tab_war":
 		start_tab_war()
@@ -845,6 +862,8 @@ func resume_game() -> void:
 		start_court_trial()
 	elif minigame_checkpoint.get("kind", "") == "digital_archaeology":
 		start_digital_archaeology()
+	elif minigame_checkpoint.get("kind", "") == "hotdog_master":
+		start_hotdog_master()
 	elif minigame_checkpoint.get("kind", "") == "last_build":
 		start_last_build()
 	elif minigame_checkpoint.get("kind", "") == "blender":
@@ -874,7 +893,7 @@ func resume_game() -> void:
 		if story.get_value("chapter_seven_complete"): show_chapter_seven_ending()
 		else: start_chapter_seven()
 	elif active_chapter == 2:
-		if story.get_value("grok_date_completed"): show_chapter_two_ending()
+		if chapter_two_complete: show_chapter_two_ending()
 		else: start_chapter_two()
 	elif active_chapter == 1:
 		show_chapter_one_checkpoint()
@@ -931,7 +950,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not event is InputEventKey or not event.pressed or event.echo:
 		return
 	var key: int = event.physical_keycode if event.physical_keycode != 0 else event.keycode
-	if mode in ["tab_war","office_404","court_trial","digital_archaeology","last_build"]: return
+	if mode in ["tab_war","office_404","court_trial","digital_archaeology","last_build","hotdog_master"]: return
 	if mode == "credits":
 		if key == KEY_ESCAPE:
 			show_chapter_seven_ending()
@@ -1108,7 +1127,7 @@ func _start_dialogue_entries(entries_to_play: Array, start_index: int = 0) -> vo
 	elif flow.begins_with("chapter_one"):
 		_set_active_chapter(1)
 	AudioManager.set_walking(false)
-	AudioManager.play_music("dialogue")
+	AudioManager.play_music("hotdog_master" if flow in ["chapter_two_artrey", "hotdog_taste", "hotdog_poisoning", "hotdog_repeat"] else "dialogue")
 	var dialogue_entries: Array = entries_to_play.duplicate(true)
 	for entry_index in range(dialogue_entries.size()):
 		var entry: Variant = dialogue_entries[entry_index]
@@ -1131,7 +1150,7 @@ func _start_dialogue_entries(entries_to_play: Array, start_index: int = 0) -> vo
 	task_panel.hide()
 	interaction_prompt.hide()
 	_refresh_hud_visibility()
-	var use_phone_chat := _is_artrey_phone_conversation(dialogue_entries)
+	var use_phone_chat := _is_artrey_phone_conversation(dialogue_entries) and flow not in ["chapter_two_artrey", "hotdog_taste", "hotdog_poisoning", "hotdog_repeat"]
 	var is_call := flow.begins_with("phone_call_")
 	_set_phone_chat_hud(use_phone_chat or is_call)
 	if is_call:
@@ -1299,6 +1318,8 @@ func _close_dialogue() -> void:
 		return
 	if completed_flow == "chapter_five_outro":
 		story.set_value("chapter_five_complete",true)
+		if str(story.decisions.get("court_jbt_question", "")) == "c5_jbt_yes" and bool(story.get_value("gpt_boundaries")) and bool(story.get_value("gpt_trust")) and int(story.get_value("affection_gpt")) >= 3 and not bool(story.get_value("lied_in_court")):
+			AchievementManager.report_story_event("jbt_route_respected")
 		refresh_goal()
 		save_progress()
 		show_chapter_five_ending()
@@ -1328,14 +1349,25 @@ func _close_dialogue() -> void:
 			bios_background.queue_free()
 		refresh_goal()
 		save_progress()
-		if not story.get_value("artbay_intro_seen"):
-			start_artrey()
-		else:
-			_finish_chapter_two()
+		start_hotdog_master()
 		return
 	if completed_flow == "chapter_two_artrey":
 		story.set_value("artbay_intro_seen", true)
+		story.set_value("hotdog_first_visit_seen", true)
+		story.set_value("hotdog_order_stage", 1)
+		story.set_value("hotdog_order_choice", "master")
+		if is_instance_valid(hotdog_master): hotdog_master.hide()
 		AchievementManager.report_story_event("artbay_first_chat")
+		start_hotdog_master(true)
+		return
+	if completed_flow == "hotdog_taste":
+		story.set_value("hotdog_order_stage", 3)
+		play_chapter_scene("hotdog_poisoning", Early.hotdog_poisoning(str(story.decisions.get("artrey_cooperation", "")) == "artrey_refuse", str(story.get_value("hotdog_order_choice", "master"))))
+		save_progress()
+		return
+	if completed_flow == "hotdog_poisoning":
+		story.set_value("hotdog_order_stage", 4)
+		if is_instance_valid(hotdog_master): hotdog_master.hide()
 		if str(story.decisions.get("artrey_cooperation", "")) != "artrey_refuse":
 			Early.show_brainstorm(self)
 		else:
@@ -1344,6 +1376,10 @@ func _close_dialogue() -> void:
 	if completed_flow == "artrey_plan_done":
 		AchievementManager.report_story_event("artbay_brainstorm")
 		_finish_chapter_two()
+		return
+	if completed_flow == "hotdog_repeat":
+		flow = ""
+		start_hotdog_master(true)
 		return
 	if completed_flow == "chapter_one_evidence":
 		if pending_evidence != "" and not chapter_one_evidence.has(pending_evidence):
@@ -1449,7 +1485,7 @@ func show_desktop() -> void:
 	button_at(computer_panel,"×",Vector2(714,7),Vector2(32,29),_close_computer)
 	var apps := [["МОЯ ИГРА","project"],["Blender","blender"],["ЖБТ","jbt"],["Поиск","search"],["Блокнот","notebook"],["Grok","grok"]]
 	for i in range(apps.size()):
-		desktop_shortcut(apps[i][0],apps[i][1],i,Vector2(20+(i%2)*116,49+(i/2)*95))
+		desktop_shortcut(apps[i][0],apps[i][1],i,Vector2(20+(i%2)*116,49+floori(float(i)/2.0)*95))
 	var taskbar := ColorRect.new()
 	taskbar.position=Vector2(4,345)
 	taskbar.size=Vector2(752,56)
@@ -1496,7 +1532,7 @@ func _launch_pending_chapter() -> void:
 
 func _start_chapter_opening_dialogue(chapter: int) -> void:
 	match chapter:
-		3: play_chapter_scene("chapter_three_intro", preload("res://scripts/chapter_three.gd").opening())
+		3: play_chapter_scene("chapter_three_intro", preload("res://scripts/chapter_three.gd").opening(story.values))
 		4: play_chapter_scene("chapter_four_intro", preload("res://scripts/chapter_four.gd").opening(story.values))
 		5: play_chapter_scene("chapter_five_intro", preload("res://scripts/chapter_five.gd").opening(story.values))
 		6: play_chapter_scene("chapter_six_intro", preload("res://scripts/chapter_six.gd").opening(story.values))
@@ -1524,7 +1560,7 @@ func desktop_shortcut(title: String, id: String, index: int, pos: Vector2) -> vo
 	computer_panel.add_child(shortcut)
 	var atlas := AtlasTexture.new()
 	atlas.atlas=load("res://assets/ui/desktop/icons.png")
-	atlas.region=Rect2((index%3)*512,(index/3)*512,512,512)
+	atlas.region=Rect2((index%3)*512,floori(float(index)/3.0)*512,512,512)
 	var icon := TextureRect.new()
 	icon.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
 	icon.texture=atlas
@@ -1601,6 +1637,8 @@ func _show_grok_archive_for_chapter(chapter: int) -> void:
 
 func show_doodle_jump() -> void:
 	AchievementManager.unlock_achievement("doodle_jump_found")
+	AudioManager.stop_pc_sfx()
+	AudioManager.play_music("doodle_jump")
 	app_header("ПУСК · ПРЫЖКИ ГРАТА")
 	mode = "doodle_jump"
 	text_at(app_panel, "A / D или ← / → — двигаться · Esc — назад", Vector2(27, 55), Vector2(690, 24), 12, Color("c3abd7"))
@@ -1626,9 +1664,13 @@ func go_back() -> void:
 	elif mode=="notebook" and notebook_from_room:
 		_close_computer()
 	else:
+		if mode == "doodle_jump": AudioManager.play_pc_sfx()
 		show_desktop()
 
-func show_friends_chat() -> void:
+func show_friends_chat(page: String = "artrey") -> void:
+	if active_chapter == 0:
+		page = "artrey"
+	phone_notes_open = page.begins_with("draft_")
 	AudioManager.set_walking(false)
 	AudioManager.play_music("room")
 	computer_panel.hide()
@@ -1641,43 +1683,223 @@ func show_friends_chat() -> void:
 	phone_panel.clip_contents = true
 	mode = "friends_chat"
 	computer_open = false
+	var screen := Panel.new()
+	screen.position = Vector2(7, 7)
+	screen.size = Vector2(306, 478)
+	var screen_style := StyleBoxFlat.new()
+	screen_style.bg_color = Color("f4f0e8") if phone_notes_open else Color("111522")
+	screen_style.set_corner_radius_all(25)
+	screen.add_theme_stylebox_override("panel", screen_style)
+	screen.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	phone_panel.add_child(screen)
+	var wallpaper := ColorRect.new()
+	wallpaper.position = Vector2(9, 177)
+	wallpaper.size = Vector2(302, 273)
+	wallpaper.color = Color("f4f0e8") if phone_notes_open else Color("171827")
+	wallpaper.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	phone_panel.add_child(wallpaper)
 	var notch := Panel.new()
-	notch.position = Vector2(112,7)
-	notch.size = Vector2(66,7)
+	notch.position = Vector2(123, 8)
+	notch.size = Vector2(74, 12)
 	var notch_style := StyleBoxFlat.new()
-	notch_style.bg_color = Color("3b3945")
-	notch_style.set_corner_radius_all(4)
+	notch_style.bg_color = Color("06070c")
+	notch_style.set_corner_radius_all(7)
 	notch.add_theme_stylebox_override("panel",notch_style)
+	notch.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	phone_panel.add_child(notch)
-	text_at(phone_panel,_time_of_day_text(),Vector2(18,22),Vector2(60,18),12,Color("c9c3d1"))
-	text_at(phone_panel,"● ● ●  ▰",Vector2(204,22),Vector2(70,18),11,Color("c9c3d1"))
+	text_at(phone_panel,_time_of_day_text(),Vector2(23,25),Vector2(62,18),12,Color("3b3740") if phone_notes_open else Color("e9e3ef"))
+	text_at(phone_panel,"▂▄▆  ◖●◗  ▰",Vector2(220,25),Vector2(77,18),10,Color("3b3740") if phone_notes_open else Color("e9e3ef"))
 	var header := Panel.new()
-	header.position = Vector2(8,45)
-	header.size = Vector2(274,56)
+	header.position = Vector2(9,53)
+	header.size = Vector2(302,68)
 	var header_style := StyleBoxFlat.new()
-	header_style.bg_color = Color("292437")
-	header_style.set_corner_radius_all(8)
+	header_style.bg_color = Color("f4f0e8") if phone_notes_open else Color("1c2030")
+	header_style.set_corner_radius_all(0)
 	header.add_theme_stylebox_override("panel",header_style)
+	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	phone_panel.add_child(header)
-	text_at(header,"‹",Vector2(12,12),Vector2(22,30),27,Color("d8c8ed"))
-	text_at(header,"ДРУЗЬЯ",Vector2(43,8),Vector2(170,22),16)
-	text_at(header,"Артрей · в сети",Vector2(44,30),Vector2(170,18),11,Color("9bc8a9"))
-	text_at(phone_panel,"Сегодня",Vector2(106,108),Vector2(80,18),11,Color("aaa3b1"))
-	_add_friends_chat_bubble("Грат · голосовое", "▶  0:07\n«Короче, делаю игру. Авторский проект. Всё сам»", Vector2(54,135), Vector2(222,88), true)
-	_add_friends_chat_bubble("Артрей", "Ну что, творческий директор, когда покажешь не обещания, а что-нибудь рабочее?", Vector2(14,232), Vector2(262,108), false)
-	text_at(phone_panel,"Прочитано · 03:48",Vector2(143,342),Vector2(128,17),10,Color("aaa3b1"))
-	var message_bar := Panel.new()
-	message_bar.position = Vector2(10,365)
-	message_bar.size = Vector2(270,38)
-	var bar_style := StyleBoxFlat.new()
-	bar_style.bg_color = Color("24212e")
-	bar_style.set_corner_radius_all(14)
-	message_bar.add_theme_stylebox_override("panel",bar_style)
-	phone_panel.add_child(message_bar)
-	text_at(message_bar,"Ответить позже…",Vector2(13,9),Vector2(190,22),12,Color("a9a3b0"))
-	text_at(message_bar,"＋",Vector2(235,5),Vector2(25,27),20,Color("cdbbdf"))
-	button_at(phone_panel,"Закрыть чат · к проекту",Vector2(14,410),Vector2(262,34),_close_friends_chat)
+	if phone_notes_open:
+		_phone_button("‹",Vector2(15,68),Vector2(34,38),show_friends_chat.bind(page.trim_prefix("draft_")),25)
+		text_at(phone_panel,"Заметки",Vector2(61,68),Vector2(218,27),18,Color("2d2a30"))
+		text_at(phone_panel,"На моём телефоне",Vector2(61,94),Vector2(218,17),10,Color("8b857e"))
+		var divider := ColorRect.new()
+		divider.position = Vector2(22,121)
+		divider.size = Vector2(276,1)
+		divider.color = Color("d9d1c4")
+		divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		phone_panel.add_child(divider)
+	else:
+		_phone_button("‹",Vector2(15,68),Vector2(34,38),_close_friends_chat,25,true)
+		var contact := page if page in ["artrey", "grok", "jbt"] else "artrey"
+		_phone_contact_avatar(contact)
+		var display_contact := "Грок" if contact == "grok" else "ЖБТ" if contact == "jbt" else "Артрей"
+		text_at(phone_panel,display_contact,Vector2(110,68),Vector2(180,27),17,Color("f4edf9"))
+		text_at(phone_panel,"в сети · сообщения",Vector2(110,94),Vector2(180,17),10,Color("9dcab4"))
+	if active_chapter > 0 and not phone_notes_open:
+		var pages := [
+			["Артрей", "artrey"], ["Грок", "grok"], ["ЖБТ", "jbt"], ["Чернов.", "draft_grok"]
+		]
+		for index in range(pages.size()):
+			var selected := page == str(pages[index][1]) or page.begins_with("draft_") and index == 3
+			_phone_button(str(pages[index][0]), Vector2(17 + index * 73, 133), Vector2(68, 32), show_friends_chat.bind(str(pages[index][1])), 10, selected)
+	if page.begins_with("draft_"):
+		_show_phone_draft(page.trim_prefix("draft_"))
+	else:
+		_show_phone_conversation(page)
+	var home_bar := Panel.new()
+	home_bar.position = Vector2(119,472)
+	home_bar.size = Vector2(82,4)
+	var home_style := StyleBoxFlat.new()
+	home_style.bg_color = Color("aaa49d") if phone_notes_open else Color("b1aabc")
+	home_style.set_corner_radius_all(3)
+	home_bar.add_theme_stylebox_override("panel",home_style)
+	home_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	phone_panel.add_child(home_bar)
 	_show_hint("E — открыть телефон · Esc — закрыть чат")
+
+func _phone_contact_avatar(contact: String) -> void:
+	var crops := {
+		"artrey": Rect2(52, 18, 280, 280),
+		"grok": Rect2(35, 3, 260, 260),
+		"jbt": Rect2(18, 0, 275, 275),
+	}
+	var backing := Panel.new()
+	backing.position = Vector2(60,67)
+	backing.size = Vector2(40,40)
+	backing.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var backing_style := StyleBoxFlat.new()
+	backing_style.bg_color = Color("554267") if contact == "grok" else Color("3b5760") if contact == "jbt" else Color("4a415f")
+	backing_style.border_color = Color("8d7a9d")
+	backing_style.set_border_width_all(1)
+	backing_style.set_corner_radius_all(20)
+	backing.add_theme_stylebox_override("panel", backing_style)
+	phone_panel.add_child(backing)
+	if not phone_avatar_textures.has(contact):
+		var source: Texture2D = load("res://assets/portraits/" + contact + "-emotions.png")
+		var region: Rect2i = Rect2i(crops[contact])
+		phone_avatar_textures[contact] = ImageTexture.create_from_image(source.get_image().get_region(region))
+	var photo := TextureRect.new()
+	photo.name = "ContactAvatar"
+	photo.position = Vector2(61,68)
+	photo.size = Vector2(38,38)
+	photo.texture = phone_avatar_textures[contact]
+	photo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	photo.stretch_mode = TextureRect.STRETCH_SCALE
+	photo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var mask := ShaderMaterial.new()
+	mask.shader = preload("res://assets/ui/phone_avatar.gdshader")
+	photo.material = mask
+	phone_panel.add_child(photo)
+
+func _phone_button(caption: String, pos: Vector2, area: Vector2, action: Callable, font_size: int, selected: bool = false) -> Button:
+	var button := Button.new()
+	button.position = pos
+	button.size = area
+	button.text = ""
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.pressed.connect(action)
+	for state in ["normal", "hover", "pressed", "focus"]:
+		var style := StyleBoxFlat.new()
+		style.bg_color = (Color("eddaae") if state == "pressed" or selected else Color("f7ead0") if state == "hover" or state == "focus" else Color("fffaf1")) if phone_notes_open else (Color("514066") if state == "pressed" or selected else Color("313247") if state == "hover" or state == "focus" else Color("242738"))
+		style.border_color = (Color("b98e42") if state == "focus" or selected else Color("ded5c6")) if phone_notes_open else (Color("a790bb") if state == "focus" else Color("6e5b82") if selected else Color(0,0,0,0))
+		style.set_border_width_all(1 if phone_notes_open or state == "focus" or selected else 0)
+		style.set_corner_radius_all(13)
+		button.add_theme_stylebox_override(state, style)
+	var label := Label.new()
+	label.text = caption
+	label.position = Vector2(5,2)
+	label.size = area - Vector2(10,4)
+	label.clip_text = true
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size",font_size)
+	label.add_theme_color_override("font_color",Color("44382b") if phone_notes_open else Color("f4edf9"))
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button.add_child(label)
+	phone_panel.add_child(button)
+	return button
+
+func _show_phone_conversation(contact: String) -> void:
+	var sender: String = str({"artrey":"Артрей", "grok":"Грок", "jbt":"ЖБТ"}.get(contact, "Артрей"))
+	var outgoing := "▶  0:07\n«Делаю игру. Авторский проект. Всё сам»"
+	var incoming := "Ну что, творческий директор, когда покажешь что-нибудь рабочее?"
+	if contact == "artrey":
+		if story.get_value("artbay_betrayal", false):
+			outgoing = "Я нашёл копию и даты. Поговорим без презентации?"
+			incoming = "Поговорим лично. В чате это только хуже выглядит."
+		elif story.get_value("old_project_notes_found", false):
+			outgoing = "В старой папке остались версии и журнал доступа."
+			incoming = "Вижу. Давай сверим даты и разберёмся, кто что сделал."
+		elif story.get_value("artbay_intro_seen", false):
+			outgoing = "После киоска покажу рабочую сборку, не обещания."
+			incoming = "Вот это уже разговор. Я тоже принесу свои файлы."
+	elif contact == "grok":
+		outgoing = "Ключ пока не готов. Я всё ещё собираю игру."
+		incoming = "Покажи конкретную проблему. И не называй один скрин всей сборкой."
+		if story.get_value("grok_trust", false):
+			incoming = "Я могу посмотреть. Только сначала расскажи, что уже сделал сам."
+	elif contact == "jbt":
+		outgoing = "Я снова открыл проект. С чего начать?"
+		incoming = "С одного проверяемого шага. Сохрани копию, потом покажи ошибку."
+		if story.get_value("old_project_notes_found", false):
+			incoming = "В старых версиях есть порядок изменений. Сверь его с датами файлов."
+	var draft_answer := str(story.decisions.get("phone_draft_" + contact, ""))
+	if draft_answer == "honest":
+		outgoing = "Я застрял и боюсь снова бросить игру. Поможешь разобраться, не делая всё за меня?"
+		incoming = "Покажи одну проблему. Дальше решим вместе." if contact == "grok" else "Да. Начнём с того, что ты уже проверил."
+	elif draft_answer == "joke":
+		outgoing = "Срочный баг: автор проекта внезапно должен работать." if contact == "grok" else "Если проект упадёт, виновата табуретка."
+		incoming = "Редкий баг. Покажи сборку." if contact == "grok" else "Сначала сохрани проект, потом обвиняй мебель."
+	var date_label := text_at(phone_panel,"СЕГОДНЯ · " + _time_of_day_text(),Vector2(20,177),Vector2(280,17),10,Color("8f91a4"))
+	date_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_add_friends_chat_bubble("Грат", outgoing, Vector2(76,203), Vector2(220,78), true)
+	_add_friends_chat_bubble(str(sender), incoming, Vector2(24,290), Vector2(241,89), false)
+	text_at(phone_panel,"✓✓  Доставлено",Vector2(205,382),Vector2(90,15),9,Color("aca1ba"))
+	if contact == "artrey" and story.get_value("hotdog_first_visit_seen",false):
+		_phone_button("К киоску · Артрей  →",Vector2(18,414),Vector2(284,43),func():
+			_close_friends_chat()
+			start_hotdog_master(true),12,true)
+	elif contact in ["grok", "jbt"] and active_chapter > 0:
+		_phone_button("Написать " + str(sender),Vector2(18,414),Vector2(284,43),show_friends_chat.bind("draft_" + contact),12,true)
+	else:
+		var composer := Panel.new()
+		composer.position = Vector2(18,414)
+		composer.size = Vector2(284,43)
+		var composer_style := StyleBoxFlat.new()
+		composer_style.bg_color = Color("242738")
+		composer_style.set_corner_radius_all(17)
+		composer.add_theme_stylebox_override("panel",composer_style)
+		composer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		phone_panel.add_child(composer)
+		text_at(composer,"Ответить позже…",Vector2(15,12),Vector2(225,20),12,Color("9394a6"))
+
+func _show_phone_draft(contact: String) -> void:
+	if contact not in ["grok", "jbt"]:
+		contact = "grok"
+	text_at(phone_panel,"Черновик разговора",Vector2(23,139),Vector2(274,28),18,Color("2d2a30"))
+	text_at(phone_panel,"Сегодня, " + _time_of_day_text() + "  ·  Не отправлено",Vector2(23,170),Vector2(274,17),10,Color("888178"))
+	text_at(phone_panel,"КОМУ НАПИСАТЬ",Vector2(23,189),Vector2(260,16),10,Color("82796e"))
+	_phone_button("Грок",Vector2(18,211),Vector2(137,32),show_friends_chat.bind("draft_grok"),11,contact == "grok")
+	_phone_button("ЖБТ",Vector2(165,211),Vector2(137,32),show_friends_chat.bind("draft_jbt"),11,contact == "jbt")
+	var chosen := str(story.decisions.get("phone_draft_" + contact, ""))
+	var addressee := "Грок" if contact == "grok" else "ЖБТ"
+	var draft := "Я застрял и боюсь снова бросить игру. Поможешь разобраться, не делая всё за меня?"
+	var joke := "Срочный баг: автор проекта внезапно должен работать." if contact == "grok" else "Если проект упадёт, виновата табуретка."
+	if chosen.is_empty():
+		_add_friends_chat_bubble("ДЛЯ " + addressee.to_upper(), "Написать прямо или снова спрятаться за шуткой?", Vector2(18,254), Vector2(284,88), true)
+		_phone_button("Написать честно  →",Vector2(18,350),Vector2(284,45),_phone_send_draft.bind(contact,"honest"),12,true)
+		_phone_button("Отправить шутку",Vector2(18,404),Vector2(284,45),_phone_send_draft.bind(contact,"joke"),12)
+	else:
+		_add_friends_chat_bubble("ОТПРАВЛЕНО · " + addressee.to_upper(),draft if chosen == "honest" else joke,Vector2(18,254),Vector2(284,108),true)
+		text_at(phone_panel,"Сообщение отправлено · выбор сохранён",Vector2(23,370),Vector2(274,24),11,Color("687d6d"))
+		_phone_button("Вернуться к переписке  →",Vector2(18,406),Vector2(284,43),show_friends_chat.bind(contact),12,true)
+
+func _phone_send_draft(contact: String, choice: String) -> void:
+	if active_chapter <= 0 or contact not in ["grok", "jbt"] or choice not in ["honest", "joke"]:
+		return
+	if story.decide("phone_draft_" + contact, choice):
+		save_progress()
+	show_friends_chat(contact)
 
 func _add_friends_chat_bubble(sender: String, message: String, pos: Vector2, area: Vector2, outgoing: bool) -> void:
 	var bubble := Panel.new()
@@ -1685,21 +1907,28 @@ func _add_friends_chat_bubble(sender: String, message: String, pos: Vector2, are
 	bubble.size = area
 	bubble.clip_contents = true
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color("51416d") if outgoing else Color("282633")
-	style.set_corner_radius_all(10)
+	style.bg_color = Color("fffaf1") if phone_notes_open else Color("514368") if outgoing else Color("2b2c3c")
+	if phone_notes_open:
+		style.border_color = Color("ddd4c6")
+		style.set_border_width_all(1)
+	style.set_corner_radius_all(17)
+	if outgoing:
+		style.corner_radius_bottom_right = 5
+	else:
+		style.corner_radius_bottom_left = 5
 	bubble.add_theme_stylebox_override("panel",style)
 	phone_panel.add_child(bubble)
-	text_at(bubble,sender,Vector2(10,6),Vector2(area.x-20,17),10,Color("cfb9e9") if outgoing else Color("c8c2d0"))
+	text_at(bubble,sender,Vector2(12,8),Vector2(area.x-24,17),10,Color("a1804a") if phone_notes_open else Color("d8bdec") if outgoing else Color("b9cfcd"))
 	var body := RichTextLabel.new()
-	body.position = Vector2(10,24)
-	body.size = Vector2(area.x-20,area.y-28)
+	body.position = Vector2(12,27)
+	body.size = Vector2(area.x-24,area.y-32)
 	body.text = message
 	body.bbcode_enabled = false
 	body.fit_content = false
 	body.scroll_active = false
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_theme_font_size_override("normal_font_size",11)
-	body.add_theme_color_override("default_color",Color("f0eaf7"))
+	body.add_theme_color_override("default_color",Color("35312e") if phone_notes_open else Color("f0eaf7"))
 	body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bubble.add_child(body)
 
@@ -1858,6 +2087,8 @@ func start_chapter_three() -> void:
 
 func _prepare_chapter_computer_start(chapter: int) -> void:
 	_set_active_chapter(chapter)
+	if chapter >= 3 and minigame_checkpoint.get("kind", "") == "hotdog_master" and chapter_two_complete:
+		minigame_checkpoint.clear()
 	chapter_computer_pending = chapter
 	flow = ""
 	dialogue_open = false
@@ -1910,7 +2141,7 @@ func _finish_tab_war(result: Dictionary) -> void:
 		deltas["affection_grok" if result.get("side") == "grok" else "affection_gpt"] = 1
 	story.decide("tab_war_result",str(result.get("side","grok")),deltas,{"tab_war_completed":true,"tab_war_won":bool(result.get("won",false)),"tab_war_result":result.duplicate(true)})
 	AchievementManager.report_story_event("tab_war_finished")
-	play_chapter_scene("chapter_three_outro",preload("res://scripts/chapter_three.gd").after_tab_war(result))
+	play_chapter_scene("chapter_three_outro",preload("res://scripts/chapter_three.gd").after_tab_war(result,story.values))
 
 func show_chapter_three_ending() -> void:
 	_set_active_chapter(3)
@@ -1968,6 +2199,10 @@ func _save_office_queue(snapshot: Dictionary) -> void:
 func _finish_office_queue(result: Dictionary) -> void:
 	minigame_checkpoint.clear()
 	if is_instance_valid(office_queue): office_queue.hide()
+	if int(result.get("approved",0)) >= 3:
+		AchievementManager.report_story_event("ministry_complete")
+	if bool(result.get("stamp_obtained",false)) or bool(result.get("stamp_stolen",false)):
+		AchievementManager.report_story_event("ministry_stamp")
 	var flags := {
 		"stamp_obtained":bool(result.get("stamp_obtained",false)),
 		"stamp_stolen":bool(result.get("stamp_stolen",false)),
@@ -1976,7 +2211,7 @@ func _finish_office_queue(result: Dictionary) -> void:
 	}
 	if not story.decisions.has("chapter_four_queue_result"):
 		story.decide("chapter_four_queue_result","stolen" if flags.stamp_stolen else ("legal" if flags.stamp_obtained else "refused"),{},flags)
-	play_chapter_scene("chapter_four_outro",preload("res://scripts/chapter_four.gd").after_queue(result))
+	play_chapter_scene("chapter_four_outro",preload("res://scripts/chapter_four.gd").after_queue(result,story.values))
 
 func show_chapter_four_ending() -> void:
 	_set_active_chapter(4)
@@ -2037,6 +2272,7 @@ func _save_court_trial(snapshot: Dictionary) -> void:
 func _finish_court_trial(result: Dictionary) -> void:
 	minigame_checkpoint.clear()
 	if is_instance_valid(court_trial): court_trial.hide()
+	AchievementManager.report_story_event("printer_judge")
 	var quality := int(result.get("quality",0))
 	story.decide("chapter_five_evidence","trial",{}, {"court_evidence_quality":quality})
 	play_chapter_scene("chapter_five_outro",preload("res://scripts/chapter_five.gd").after_trial(result,story.values))
@@ -2079,7 +2315,7 @@ func start_digital_archaeology() -> void:
 	hint_label.hide()
 	AudioManager.set_walking(false)
 	AudioManager.stop_pc_sfx()
-	AudioManager.play_music("file_investigation")
+	AudioManager.play_music("old_projects")
 	mode = "digital_archaeology"
 	if not is_instance_valid(digital_archaeology):
 		digital_archaeology = preload("res://scripts/digital_archaeology.gd").new()
@@ -2090,7 +2326,7 @@ func start_digital_archaeology() -> void:
 		digital_archaeology.finished.connect(_finish_digital_archaeology)
 		digital_archaeology.pause_requested.connect(func(): pause_menu.open_pause())
 	var raw: Variant = minigame_checkpoint.get("state",{})
-	digital_archaeology.open(raw if raw is Dictionary else {})
+	digital_archaeology.open(raw if raw is Dictionary else {},story.values)
 
 func _save_digital_archaeology(snapshot: Dictionary) -> void:
 	minigame_checkpoint = {"kind":"digital_archaeology","state":snapshot}
@@ -2101,9 +2337,18 @@ func _finish_digital_archaeology(result: Dictionary) -> void:
 	if is_instance_valid(digital_archaeology): digital_archaeology.hide()
 	var has_proof := int(result.get("links",0)) >= 3
 	story.set_value("artbay_evidence",has_proof)
+	story.set_value("artbay_betrayal",true)
+	story.set_value("archive_used_backup",not has_proof)
 	if has_proof: story.set_value("project_ownership_proven",true)
+	var archive_companion := str(story.get_value("old_projects_companion","alone"))
+	if has_proof and archive_companion in ["grok","jbt"]:
+		var companion_trusted := bool(story.get_value("grok_trust",false)) and int(story.get_value("lies_count",0)) < 2 if archive_companion == "grok" else bool(story.get_value("gpt_boundaries",false)) and not bool(story.get_value("lied_in_court",false))
+		var bond_delta := {"affection_grok":1} if archive_companion == "grok" else {"affection_gpt":1}
+		story.decide("archive_companion_help",archive_companion,bond_delta if companion_trusted else {},{"archive_companion_bond":archive_companion if companion_trusted else ""})
 	if int(result.get("found",0)) > 0: AchievementManager.report_story_event("artbay_suspicion")
 	if has_proof: AchievementManager.report_story_event("digital_detective")
+	if has_proof and int(result.get("errors",0)) == 0:
+		AchievementManager.report_story_event("no_extra_files")
 	AchievementManager.report_story_event("artbay_reveal")
 	play_chapter_scene("chapter_six_outro",preload("res://scripts/chapter_six.gd").after_archaeology(result,story.values))
 
@@ -2226,7 +2471,7 @@ func show_chapter_seven_ending() -> void:
 	], 342.0)
 	if not story.decisions.has("ending_achievement_" + ending_id):
 		story.decide("ending_achievement_" + ending_id,ending_id)
-		AchievementManager.report_story_event("ending",{"id":ending_id})
+	AchievementManager.report_story_event("ending",{"id":ending_id})
 
 func show_credits() -> void:
 	_clear_credits_screen()
@@ -2302,11 +2547,21 @@ func _clear_credits_screen() -> void:
 
 func start_chapter_two() -> void:
 	_set_active_chapter(2)
+	if minigame_checkpoint.get("kind", "") == "hotdog_master":
+		start_hotdog_master()
+		return
 	if minigame_checkpoint.get("kind", "") == "brainstorm":
 		Early.show_brainstorm(self)
 		return
 	if story.get_value("grok_date_completed") and not story.get_value("artbay_intro_seen"):
-		start_artrey()
+		start_hotdog_master()
+		return
+	if story.get_value("grok_date_completed") and story.get_value("artbay_intro_seen") and not story.get_value("brainstorm_completed"):
+		if int(story.get_value("hotdog_order_stage",0)) in [1,2,3]:
+			start_hotdog_master(true)
+			return
+		if str(story.decisions.get("artrey_cooperation", "")) == "artrey_refuse": _finish_chapter_two()
+		else: Early.show_brainstorm(self)
 		return
 	if _maybe_start_call_event(2): return
 	_continue_chapter_two_start()
@@ -2439,10 +2694,126 @@ func _build_bios_background() -> void:
 	text_at(bios_background,"CPU: INTEL · HEART: NOT DETECTED\n\n[ SYSTEM PROCESSES ]    [ DINNER.EXE ]    [ DEFENDER ]\n\nInitializing relationship...\nPress any compliment to continue",Vector2(45,90),Vector2(860,220),19,Color("9edbff"))
 
 func start_artrey() -> void:
-	_set_active_chapter(2)
-	play_chapter_scene("chapter_two_artrey", Early.artrey_intro())
+	start_hotdog_master()
+
+func _show_hotdog_background_for_dialogue() -> void:
+	if not is_instance_valid(hotdog_master):
+		hotdog_master = preload("res://HotdogMasterLocation.tscn").instantiate()
+		hotdog_master.name = "HotdogMasterLocation"
+		hotdog_master.z_index = 90
+		ui_layer.add_child(hotdog_master)
+		hotdog_master.checkpoint_changed.connect(_save_hotdog_master)
+		hotdog_master.interaction_requested.connect(_on_hotdog_master_interaction)
+		hotdog_master.order_confirmed.connect(_on_hotdog_order_confirmed)
+		hotdog_master.pause_requested.connect(func(): pause_menu.open_pause())
+		hotdog_master.return_requested.connect(_leave_hotdog_master)
+	# The location covers the whole viewport. Keep it behind the VN widget in
+	# scene-tree input order as well as draw order, so choice buttons receive clicks.
+	if hotdog_master.get_index() > vn.get_index():
+		ui_layer.move_child(hotdog_master, vn.get_index())
+	var raw: Variant = minigame_checkpoint.get("state",{}) if minigame_checkpoint.get("kind", "") == "hotdog_master" else {}
+	hotdog_master.open(raw if raw is Dictionary else {},not bool(story.get_value("hotdog_first_visit_seen",false)),false)
+	hotdog_master.hide_order_menu()
+	hotdog_master.set_dialogue_backdrop(true)
+	hotdog_master.z_index = 90
+	hotdog_master.set_process(false)
+	hotdog_master.set_process_unhandled_key_input(false)
+
+func start_hotdog_master(returning: bool = false) -> void:
+	if not story.get_value("hotdog_first_visit_seen",false): _set_active_chapter(2)
+	chapter_computer_pending = 0
+	dialogue_open = false
+	flow = ""
+	if is_instance_valid(vn): vn.close()
+	for panel in [app_panel,computer_panel,inventory_panel,dialogue_panel]: panel.hide()
+	if is_instance_valid(phone_panel): phone_panel.hide()
+	hint_label.hide()
+	AudioManager.set_walking(false)
+	AudioManager.stop_pc_sfx()
+	AudioManager.play_music("hotdog_master")
+	mode = "hotdog_master"
+	if not is_instance_valid(hotdog_master):
+		hotdog_master = preload("res://HotdogMasterLocation.tscn").instantiate()
+		hotdog_master.name = "HotdogMasterLocation"
+		hotdog_master.z_index = 150
+		ui_layer.add_child(hotdog_master)
+		hotdog_master.checkpoint_changed.connect(_save_hotdog_master)
+		hotdog_master.interaction_requested.connect(_on_hotdog_master_interaction)
+		hotdog_master.order_confirmed.connect(_on_hotdog_order_confirmed)
+		hotdog_master.pause_requested.connect(func(): pause_menu.open_pause())
+		hotdog_master.return_requested.connect(_leave_hotdog_master)
+	if hotdog_master.get_index() > vn.get_index():
+		ui_layer.move_child(hotdog_master, vn.get_index())
+	var restoring: bool = minigame_checkpoint.get("kind","") == "hotdog_master"
+	var raw: Variant = minigame_checkpoint.get("state",{}) if restoring else {}
+	hotdog_master.z_index = 150
+	hotdog_master.set_process(true)
+	hotdog_master.set_process_unhandled_key_input(true)
+	hotdog_master.open(raw if raw is Dictionary else {},not bool(story.get_value("hotdog_first_visit_seen",false)))
+	var order_stage := int(story.get_value("hotdog_order_stage",0))
+	if order_stage == 1:
+		hotdog_master.show_order_menu()
+	else:
+		hotdog_master.hide_order_menu()
+	if order_stage in [2,3]:
+		hotdog_master.set_dialogue_backdrop(true)
+		hotdog_master.z_index = 90
+		hotdog_master.set_process(false)
+		hotdog_master.set_process_unhandled_key_input(false)
+		var ordered_item := str(story.get_value("hotdog_order_choice", "master"))
+		play_chapter_scene("hotdog_taste" if order_stage == 2 else "hotdog_poisoning",Early.hotdog_taste(ordered_item) if order_stage == 2 else Early.hotdog_poisoning(str(story.decisions.get("artrey_cooperation", "")) == "artrey_refuse", ordered_item))
+		save_progress()
+		return
+	if not returning and not restoring:
+		story.set_value("hotdog_visit_count",int(story.get_value("hotdog_visit_count",0))+1)
+	_refresh_hud_visibility()
+	refresh_goal()
+	save_progress()
+
+func _save_hotdog_master(snapshot: Dictionary) -> void:
+	minigame_checkpoint = {"kind":"hotdog_master","state":snapshot.duplicate(true),"return_chapter":active_chapter}
+	save_dirty = true
+	save_progress()
+
+func _on_hotdog_master_interaction(id: String) -> void:
+	if id != "artrey":
+		return
+	hotdog_master.z_index = 90
+	hotdog_master.set_dialogue_backdrop(true)
+	hotdog_master.set_process(false)
+	hotdog_master.set_process_unhandled_key_input(false)
+	if not story.get_value("artbay_intro_seen"):
+		play_chapter_scene("chapter_two_artrey",Early.hotdog_first_chat(story.values))
+	else:
+		play_chapter_scene("hotdog_repeat",Early.hotdog_repeat_visit(story.values))
+
+func _on_hotdog_order_confirmed(item_id: String = "master") -> void:
+	if int(story.get_value("hotdog_order_stage",0)) != 1:
+		return
+	if item_id not in ["single", "double", "master", "signature"]:
+		return
+	story.set_value("hotdog_order_choice", item_id)
+	story.set_value("hotdog_order_stage",2)
+	AchievementManager.unlock_achievement("hotdog_order")
+	hotdog_master.z_index = 90
+	hotdog_master.set_dialogue_backdrop(true)
+	hotdog_master.set_process(false)
+	hotdog_master.set_process_unhandled_key_input(false)
+	play_chapter_scene("hotdog_taste",Early.hotdog_taste(item_id))
+	save_progress()
+
+func _leave_hotdog_master() -> void:
+	if is_instance_valid(hotdog_master): hotdog_master.hide()
+	minigame_checkpoint.clear()
+	mode = "room"
+	flow = ""
+	AudioManager.play_music("room")
+	refresh_goal()
+	save_progress()
 
 func _finish_chapter_two() -> void:
+	if is_instance_valid(hotdog_master): hotdog_master.hide()
+	if mode == "hotdog_master": mode = "room"
 	chapter_two_complete = true
 	minigame_checkpoint.clear()
 	refresh_goal()
@@ -2467,6 +2838,10 @@ func show_chapter_two_ending() -> void:
 	_add_ending_actions(actions, 346.0)
 
 func _reset_progress() -> void:
+	if is_instance_valid(hotdog_master):
+		hotdog_master.hide()
+		hotdog_master.queue_free()
+	hotdog_master = null
 	active_chapter = 0
 	narrative_day = CHAPTER_START_DAY[0]
 	narrative_clock_minutes = CHAPTER_START_MINUTES[0]
@@ -2508,13 +2883,15 @@ func _reset_progress() -> void:
 
 func _save_data() -> Dictionary:
 	if mode == "tab_war" and is_instance_valid(tab_war) and tab_war.visible:
-		minigame_checkpoint = {"kind":"tab_war","state":tab_war.state.snapshot()}
+		minigame_checkpoint = {"kind":"tab_war","state":tab_war._snapshot()}
 	if mode == "office_404" and is_instance_valid(office_queue) and office_queue.visible:
 		minigame_checkpoint = {"kind":"office_404","state":office_queue.state.snapshot()}
 	if mode == "court_trial" and is_instance_valid(court_trial) and court_trial.visible:
-		minigame_checkpoint = {"kind":"court_trial","state":court_trial.state.snapshot()}
+		minigame_checkpoint = {"kind":"court_trial","state":court_trial._snapshot()}
 	if mode == "digital_archaeology" and is_instance_valid(digital_archaeology) and digital_archaeology.visible:
 		minigame_checkpoint = {"kind":"digital_archaeology","state":digital_archaeology.snapshot()}
+	if mode == "hotdog_master" and is_instance_valid(hotdog_master) and hotdog_master.visible:
+		minigame_checkpoint = {"kind":"hotdog_master","state":hotdog_master.snapshot(),"return_chapter":active_chapter}
 	if mode == "last_build" and is_instance_valid(last_build) and last_build.visible:
 		minigame_checkpoint = {"kind":"last_build","state":last_build.snapshot()}
 	var checkpoint := {}
@@ -2634,7 +3011,7 @@ func load_progress() -> bool:
 		dialogue_resume = {"flow":"chapter_three_intro","entries":preload("res://scripts/chapter_three.gd").opening(),"index":old_index,"pending_evidence":""}
 	minigame_checkpoint.clear()
 	var saved_game: Variant = data.get("minigame_checkpoint", {})
-	if saved_game is Dictionary and saved_game.get("kind", "") in ["blender", "brainstorm", "tab_war", "office_404", "court_trial", "digital_archaeology", "last_build"]:
+	if saved_game is Dictionary and saved_game.get("kind", "") in ["blender", "brainstorm", "tab_war", "office_404", "court_trial", "digital_archaeology", "last_build", "hotdog_master"]:
 		minigame_checkpoint = saved_game.duplicate(true)
 		if minigame_checkpoint.get("kind") == "brainstorm":
 			var raw_picks: Variant = minigame_checkpoint.get("picks", [])
@@ -2690,6 +3067,7 @@ func _restore_active_chapter(data: Dictionary) -> void:
 	elif saved_flow.begins_with("chapter_five") or kind == "court_trial": active_chapter = 5
 	elif saved_flow.begins_with("chapter_four") or kind == "office_404": active_chapter = 4
 	elif saved_flow.begins_with("chapter_three") or kind == "tab_war": active_chapter = 3
+	elif saved_flow in ["hotdog_repeat","hotdog_taste","hotdog_poisoning"] or kind == "hotdog_master" and story.get_value("hotdog_first_visit_seen",false): active_chapter = clampi(int(minigame_checkpoint.get("return_chapter",data.get("active_chapter",2))),2,7)
 	elif saved_flow.begins_with("chapter_two") or saved_flow == "artrey_plan_done" or kind == "brainstorm": active_chapter = 2
 	elif saved_flow.begins_with("chapter_one"): active_chapter = 1
 	elif saved_flow in FLOW: active_chapter = 0
@@ -2707,7 +3085,7 @@ func _restore_active_chapter(data: Dictionary) -> void:
 
 func _read_dialogue_checkpoint(raw: Variant) -> Dictionary:
 	if not raw is Dictionary or not raw.get("entries") is Array: return {}
-	var allowed := ["intro","voice","project","blender","blender_training","blender_replay","help","search","complain","prompt","grok","chapter_one_intro","chapter_one_evidence","chapter_one_ending","chapter_two","chapter_two_artrey","chapter_computer_boot","chapter_three","chapter_three_intro","chapter_three_outro","chapter_four_intro","chapter_four_outro","chapter_five_intro","chapter_five_outro","chapter_six_intro","chapter_six_outro","chapter_seven_intro","chapter_seven_outro","polaroid_easter_egg","artrey_plan_done","room_optional","optional","phone_call_call_drx","phone_call_call_tables","phone_call_call_palych"]
+	var allowed := ["intro","voice","project","blender","blender_training","blender_replay","help","search","complain","prompt","grok","chapter_one_intro","chapter_one_evidence","chapter_one_ending","chapter_two","chapter_two_artrey","hotdog_repeat","hotdog_taste","hotdog_poisoning","chapter_computer_boot","chapter_three","chapter_three_intro","chapter_three_outro","chapter_four_intro","chapter_four_outro","chapter_five_intro","chapter_five_outro","chapter_six_intro","chapter_six_outro","chapter_seven_intro","chapter_seven_outro","polaroid_easter_egg","artrey_plan_done","room_optional","optional","phone_call_call_drx","phone_call_call_tables","phone_call_call_palych"]
 	if str(raw.get("flow", "")) not in allowed: return {}
 	var entries: Array = raw.entries
 	if entries.is_empty() or entries.size() > 512: return {}
@@ -2736,6 +3114,8 @@ func _sync_saved_achievements() -> void:
 		AchievementManager.unlock_achievement("first_model_game")
 	if story.get_value("artbay_intro_seen"):
 		AchievementManager.unlock_achievement("artbay_first_chat")
+	if int(story.get_value("hotdog_order_stage", 0)) >= 2:
+		AchievementManager.unlock_achievement("hotdog_order")
 	if story.get_value("brainstorm_completed"):
 		AchievementManager.unlock_achievement("artbay_brainstorm")
 	for call_id in call_event_completed:

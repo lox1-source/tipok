@@ -7,7 +7,7 @@ func _initialize():
 	call_deferred("run")
 func run():
 	var scene = load("res://Prologue.tscn")
-	var path := "user://transfer_resume_test.json"
+	var path := "res://tests/transfer_resume_temp.json"
 	var game = scene.instantiate()
 	game.save_path = path
 	root.add_child(game)

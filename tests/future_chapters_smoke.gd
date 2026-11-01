@@ -114,11 +114,9 @@ func run() -> void:
 	check(game.active_chapter == 6 and game.mode == "room" and game.chapter_computer_pending == 6,"глава 6 подключена через комнату после главы 5")
 	launch_chapter_from_computer(game)
 	check(game.flow == "chapter_six_intro","после запуска архива идёт сюжетное вступление главы 6")
-	for _i in range(5):
-		game.vn.advance()
-		game.vn.advance()
-		if game.mode == "digital_archaeology": break
+	finish_intro_to_minigame(game,"digital_archaeology")
 	check(game.mode == "digital_archaeology" and is_instance_valid(game.digital_archaeology),"сюжетная реплика открывает мини-игру расследования")
+	check(str(game.story.get_value("old_projects_companion")) == "grok","выбор спутника в архив сохраняется")
 	game._save_digital_archaeology({"found":["prototype"],"links":[],"errors":0})
 	check(str(game.minigame_checkpoint.get("kind","")) == "digital_archaeology","археология записывает отдельную контрольную точку")
 	var endings: Array = load("res://scripts/chapter_seven.gd").final_choice({"grok_date_completed":true,"grok_without_key":true,"gpt_boundaries":true,"artbay_contract_signed":true,"project_ownership_proven":true,"defused_tab_war":true,"affection_grok":2,"affection_gpt":2,"affection_artbay":2,"secret_protocol":true,"stamp_obtained":true})

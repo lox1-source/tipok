@@ -63,7 +63,7 @@ func submit() -> bool:
 	return false
 
 func result() -> Dictionary:
-	return {"quality":maxi(0,correct_count - int(total_mistakes / 2)),"correct_count":correct_count,"mistakes":total_mistakes,"evidence":evidence.duplicate()}
+	return {"quality":maxi(0,correct_count - floori(float(total_mistakes) / 2.0)),"correct_count":correct_count,"mistakes":total_mistakes,"evidence":evidence.duplicate()}
 
 func snapshot() -> Dictionary:
 	return {"round":round,"selected_card":selected_card,"mistakes_this_round":mistakes_this_round,"total_mistakes":total_mistakes,"correct_count":correct_count,"evidence":evidence.duplicate(),"finished":finished,"message":message}

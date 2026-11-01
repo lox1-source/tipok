@@ -3,40 +3,63 @@ extends RefCounted
 const S = preload("res://scripts/story_dialogue.gd")
 
 static func opening(values: Dictionary) -> Array:
-	var access_line := "В презентации уже стоит твоё имя в строке автора. Дай логин — утром питч, вечером миллион скачиваний." if bool(values.get("project_access_shared",false)) else "Дай логин от публикации. Ты ведь сам говорил, что хочешь, чтобы игра наконец увидели."
+	var access_line := "Ты дал мне доступ к копии. Но страницу с моим именем я тебе не показал." if bool(values.get("project_access_shared",false)) else "Я собрал копию для показа. Ты ещё не разрешал её отправлять."
+	var grok_line := "Я всё ещё злюсь. Но даты проверю вместе с тобой." if int(values.get("lies_count",0)) >= 2 else "Пойду с тобой. Если найду папку «финал_точно», смеяться разрешается?"
+	var jbt_line := "Сверю версии и время доступа. С Артреем говорить будешь сам." if bool(values.get("gpt_boundaries",false)) else "Покажу, где искать историю файлов. Решение останется за тобой."
 	var entries: Array = [
-		S.line("narrator","neutral","Глава 6. Друг, который всё устроил. В чате появляется файл: artbay_pitch_copy.zip."),
+		S.line("narrator","neutral","Артрей прислал копию игры для презентации. В поле «Автор» стоит его имя."),
 		S.line("artrey","happy",access_line),
-		S.line("grat","surprised","Погоди. Я не давал тебе готовый проект и не соглашался публиковать его от твоего имени."),
-		S.line("artrey","neutral","Тогда проверь историю файлов. Я ничего не удалял. Вроде бы."),
-		S.line("narrator","neutral","На компьютере открывается старый архив. Исследуй шесть записей и собери три связи по источникам. Таймера нет; ошибочные гипотезы останутся в журнале."),
-		S.line("grat","neutral","Сначала восстановлю хронологию. Потом решу, что делать с договором.","digital_archaeology")
+		S.line("grat","surprised","План показа — твой. Но игру сделал я. Надо проверить, когда поменялось имя."),
+		S.line("artrey","sad","Проверь старые версии. Я должен был показать тебе презентацию до отправки."),
+		S.line("narrator","neutral","Грат открывает резервную папку «Старые проекты». Там остались ранняя комната, копия для показа и история доступа. Кого позвать с собой?","companion"),
+		S.line("grok","neutral",grok_line,"with_grok","grok_reply"),
+		S.line("grok","sad","Ты называл ту дверь бесполезной, а всё равно возвращался к ней. Покажешь первую версию?","grok_reply","enter"),
+		S.line("jbt","neutral",jbt_line,"with_jbt","jbt_reply"),
+		S.line("jbt","embarrassed","Сохраним исходные файлы отдельно. Их не надо стыдливо переименовывать в «тест».","jbt_reply","enter"),
+		S.line("grat","neutral","Сначала посмотрю сам. Не хочу, чтобы за меня снова делали выводы.","alone","enter"),
+		S.line("grat","neutral","Найду прототип и сравню даты. Потом поговорю с Артреем по фактам.","enter")
 	]
-	entries[5]["story_event"] = "digital_archaeology"
+	entries[4]["choices"] = [
+		S.choice("Позвать Грок проверить старую игру","c6_companion_grok","with_grok"),
+		S.choice("Позвать ЖБТ сверить версии файлов","c6_companion_jbt","with_jbt"),
+		S.choice("Проверить архив самому","c6_companion_alone","alone")
+	]
+	entries[10]["story_event"] = "digital_archaeology"
 	return S.compile(entries)
 
 static func reveal(result: Dictionary, values: Dictionary) -> Array:
 	var complete := int(result.get("links",0)) == 3
-	var proof := "Три связи подтверждены источниками. Исходная комната и манифест — Грата; копия презентации меняет автора; доступ был до согласия." if complete else "Источников не хватило. Восстановленная резервная копия сохранит рабочий проект, но спор об авторстве остаётся открытым."
-	var access := "Ты просил read-only копию, а не пароль." if bool(values.get("project_access_shared",false)) else "Я не передавал тебе пароль. В журнале это видно."
-	var response := "Я правда хотел помочь. Потом увидел, что у тебя может получиться, и захотел, чтобы меня назвали автором, а не помощником." if complete else "Копия была у меня через доступ, который ты сам дал. Я не подумал, что презентация с моим именем уже выглядит как присвоение."
+	var proof := "Ранняя комната и исходный файл показывают, что прототип сделал Грат." if complete else "Рабочая копия восстановлена. Пока не хватает связей, чтобы доказать, когда сменили автора."
+	var pitch_fact := "Артрей сделал план показа. Сменить автора в копии — уже другое действие." if complete else "План показа принадлежит Артрею. Кто и когда изменил поле автора, ещё нужно проверить."
+	var access := "Я сам дал тебе пароль. Но это не разрешение менять имя автора." if bool(values.get("project_access_shared",false)) else "Я не передавал тебе пароль. В журнале это видно."
+	var response := "Я составил план и нашёл площадки для показа. Потом вписал себя автором. Это сделал я." if complete else "План был мой. Но презентацию с моим именем я отправил без твоего согласия. Исправлю."
+	var companion := str(values.get("old_projects_companion","alone"))
+	var companion_entry := S.line("grat","neutral","Резервную копию оставлю у себя. Теперь у меня есть с чем сравнивать.")
+	if companion == "grok":
+		companion_entry = S.line("grok","sad" if int(values.get("lies_count",0)) >= 2 else "neutral","Наш разговор ещё не закончен. Но твою работу я видела. Не отдавай её за красивый питч." if int(values.get("lies_count",0)) >= 2 else "Ты возвращался к этой двери, даже когда говорил, что бросил. Это тоже часть истории.")
+	elif companion == "jbt":
+		companion_entry = S.line("jbt","neutral","Я сохраню даты. Ты сам скажешь Артрею, что они значат." if bool(values.get("gpt_boundaries",false)) else "Я могу показать разницу версий. Говорить за тебя не буду.")
 	var entries: Array = [
 		S.line("narrator","neutral",proof),
-		S.line("grat","angry","В презентации автор — ты. В истории проекта автор — я. И копия появилась до согласия."),
+		S.line("narrator","neutral",pitch_fact),
+		companion_entry,
+		S.line("grat","angry","Твой план показа я признаю. Но в строке автора должно быть моё имя."),
 		S.line("artrey","sad",response),
 		S.line("grat","neutral",access),
-		S.line("grat","neutral","Что будем делать дальше?","decision"),
-		S.line("grat","happy","Исправь авторство. Подпишем прозрачный договор и будем публиковать вместе.","contract","response_contract"),
-		S.line("artrey","embarrassed","Да. Я исправлю презентацию. Доли и роли пропишем до публикации.","response_contract","wrap"),
+		S.line("grat","neutral","Что делаем с презентацией и доступом?","decision"),
+		S.line("grat","happy","Исправь авторство. Покажи новую страницу и договор с ясными ролями. Потом подпишем.","contract","response_contract"),
+		S.line("artrey","embarrassed","Убрал своё имя из поля автора. Мой план отмечен отдельно. Договор покажу до публикации.","response_contract","wrap"),
+		S.line("grat","neutral","Пока у меня только восстановленная копия. Сначала соберу доказательства, потом вернусь к договору.","defer","response_defer"),
+		S.line("artrey","neutral","Хорошо. До новых писем покажу тебе исправленную страницу.","response_defer","wrap"),
 		S.line("grat","neutral","Убирай мою игру из презентации. Контакт прекращаю.","cut","response_cut"),
-		S.line("artrey","neutral","Понял. Я удалю питч и не буду спорить.","response_cut","wrap"),
+		S.line("artrey","neutral","Понял. Удалю питч и сообщу получателям об ошибке.","response_cut","wrap"),
 		S.line("grat","afraid","Я верю тебе. Можешь сам опубликовать копию.","trust","response_trust"),
 		S.line("artrey","happy","Спасибо. Я всё улажу.","response_trust","wrap"),
-		S.line("narrator","neutral","Глава 6 завершена. Рабочая копия сохранена; завтра предстоит последняя сборка и решение о релизе.","wrap","end"),
-		S.line("grat","happy","Завтра последняя сборка. Впервые все копии проекта ведут обратно к рабочей версии Грата.","end")
+		S.line("narrator","neutral","Копия сохранена. Завтра Грат проверит последнюю сборку и решит, кто может её публиковать.","wrap","end"),
+		S.line("grat","happy","Дверь ещё не открылась. Зато теперь я знаю, где моя игра.","end")
 	]
-	entries[4]["choices"] = [
-		S.choice("Исправить авторство и подписать прозрачный договор" if complete else "Предложить прозрачный договор и обязательные титры","c6_contract","contract"),
+	entries[6]["choices"] = [
+		S.choice("Исправить авторство и проверить договор","c6_contract","contract") if complete else S.choice("Отложить договор до проверки истории файлов","c6_defer","defer"),
 		S.choice("Разорвать контакт и убрать игру из презентации","c6_cut","cut"),
 		S.choice("Поверить обещанию и отдать контроль","c6_trust","trust")
 	]

@@ -4,7 +4,7 @@ const KEY_NORMAL: Texture2D = preload("res://assets/ui/buttons/key-grabber.svg")
 const KEY_HOVER: Texture2D = preload("res://assets/ui/buttons/key-grabber-hover.svg")
 const KEY_PRESSED: Texture2D = preload("res://assets/ui/buttons/key-grabber-pressed.svg")
 
-static func apply(button: Button) -> void:
+static func apply(_button: Button) -> void:
 	# Keep this compatibility hook for existing button builders; native Godot styles are used.
 	pass
 

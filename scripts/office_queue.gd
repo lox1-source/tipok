@@ -17,6 +17,10 @@ var tutorial_panel: Control
 var result_summary: Label
 var save_clock := 0.0
 var steal_stamp := false
+var tutorial_step := 0
+var tutorial_feedback: Label
+var tutorial_buttons: Array[Button] = []
+var tutorial_continue: Button
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -29,7 +33,8 @@ func _ready() -> void:
 	add_child(bg)
 	_label(self,"МИНИСТЕРСТВО КЛЮЧЕВЫХ ДЕЛ · ОКОШКО 404",Vector2(32,14),Vector2(740,34),22,Color("f3d7ab"))
 	_button(self,"Пауза",Vector2(850,16),Vector2(82,30),func(): pause_requested.emit())
-	_label(self,"Всего три дела · каждый талон решается одним документом в одном окне",Vector2(34,51),Vector2(880,25),14,Color("b8b3c2"))
+	_label(self,"Всего три дела · каждый талон решается одним документом в одном окне",Vector2(34,51),Vector2(700,25),14,Color("b8b3c2"))
+	_button(self,"Как играть?",Vector2(780,51),Vector2(145,27),_show_tutorial)
 	for i in range(Model.CASES.size()):
 		var b := Button.new()
 		b.position = Vector2(150 + i * 220,86)
@@ -89,7 +94,9 @@ func open(snapshot: Dictionary = {}) -> void:
 	steal_stamp = false
 	save_clock = 0.0
 	result_panel.hide()
+	tutorial_step = 0
 	tutorial_panel.visible = not state.tutorial_seen
+	_update_tutorial()
 	show()
 	_render()
 	if state.tutorial_seen: checkpoint_changed.emit(state.snapshot())
@@ -104,7 +111,8 @@ func _process(delta: float) -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not visible or not event is InputEventKey or not event.pressed or event.echo: return
 	if tutorial_panel.visible:
-		if event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER: _start_tutorial()
+		if event.keycode in [KEY_ESCAPE,KEY_P]: pause_requested.emit()
+		elif event.keycode in [KEY_ENTER,KEY_KP_ENTER]: _start_tutorial()
 		get_viewport().set_input_as_handled()
 		return
 	if event.keycode == KEY_ESCAPE or event.keycode == KEY_P:
@@ -191,16 +199,35 @@ func _build_tutorial() -> void:
 	shade.mouse_filter = Control.MOUSE_FILTER_STOP
 	tutorial_panel.add_child(shade)
 	_panel(tutorial_panel,Vector2(104,66),Vector2(752,406),Color("211c2a"))
-	_label(tutorial_panel,"КАК РАБОТАЕТ ОЧЕРЕДЬ",Vector2(142,87),Vector2(660,38),24,Color("f3d7ab"))
-	_label(tutorial_panel,"Порядок: выбери талон → один документ → подходящее окно.",Vector2(142,137),Vector2(670,28),14,Color("e5ddec"))
-	_label(tutorial_panel,"1. «Ключ отсутствует» → «Скрин ERROR» → Окно 1",Vector2(154,177),Vector2(650,30),14,Color("e5ddec"))
-	_label(tutorial_panel,"2. «Текстовый ключ» → «key.txt» → Окно 2",Vector2(154,215),Vector2(650,30),14,Color("e5ddec"))
-	_label(tutorial_panel,"3. «Автор проекта» → «История проекта» → Окно 3",Vector2(154,253),Vector2(650,30),14,Color("e5ddec"))
-	_label(tutorial_panel,"Ошибся? Ничего не теряется — попробуй снова. Таймера нет.",Vector2(142,296),Vector2(670,34),13,Color("c9bfd5"))
-	_label(tutorial_panel,"Архив необязателен: Протокол 0 пригодится для суда.\nПосле трёх дел выбери: получить печать, уйти или украсть печать.",Vector2(142,334),Vector2(670,54),13,Color("c9bfd5"))
-	_button(tutorial_panel,"Понятно · начать",Vector2(350,410),Vector2(260,44),_start_tutorial)
+	_label(tutorial_panel,"ПОПРОБУЙ НА ТРЕНИРОВОЧНОМ ТАЛОНЕ",Vector2(142,87),Vector2(660,38),22,Color("f3d7ab"))
+	_label(tutorial_panel,"Тут нет таймера и ошибок. Сначала выбери талон, затем документ и окно.",Vector2(142,137),Vector2(670,45),14,Color("e5ddec"))
+	tutorial_feedback = _label(tutorial_panel,"",Vector2(142,194),Vector2(670,46),15,Color("f0dba9"))
+	tutorial_buttons.append(_button(tutorial_panel,"Талон · ключ отсутствует",Vector2(142,254),Vector2(210,52),func(): _tutorial_action(0)))
+	tutorial_buttons.append(_button(tutorial_panel,"Документ · скрин ERROR",Vector2(375,254),Vector2(210,52),func(): _tutorial_action(1)))
+	tutorial_buttons.append(_button(tutorial_panel,"Окно 1 · принять",Vector2(608,254),Vector2(210,52),func(): _tutorial_action(2)))
+	_label(tutorial_panel,"В настоящей очереди три дела. Неподходящий документ можно заменить; архив с Протоколом 0 необязателен.",Vector2(142,332),Vector2(670,55),13,Color("c9bfd5"))
+	tutorial_continue = _button(tutorial_panel,"Перейти к очереди",Vector2(350,410),Vector2(260,44),_start_tutorial)
+
+func _show_tutorial() -> void:
+	tutorial_step = 0
+	_update_tutorial()
+	tutorial_panel.show()
+
+func _tutorial_action(index: int) -> void:
+	if index != tutorial_step:
+		tutorial_feedback.text = "Сначала " + ["выбери талон.","приложи скрин ERROR.","подай его в Окно 1."][tutorial_step]
+		return
+	tutorial_step += 1
+	_update_tutorial()
+
+func _update_tutorial() -> void:
+	if not is_instance_valid(tutorial_feedback): return
+	tutorial_feedback.text = ["Шаг 1: нажми на тренировочный талон.","Шаг 2: выбери подходящий документ.","Шаг 3: подай документ в Окно 1.","Верно! Талон принят. Теперь попробуй три настоящих дела."][tutorial_step]
+	for i in range(tutorial_buttons.size()): tutorial_buttons[i].disabled = i < tutorial_step
+	tutorial_continue.disabled = tutorial_step < 3
 
 func _start_tutorial() -> void:
+	if tutorial_step < 3: return
 	state.tutorial_seen = true
 	tutorial_panel.hide()
 	checkpoint_changed.emit(state.snapshot())

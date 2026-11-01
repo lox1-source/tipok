@@ -45,6 +45,12 @@ func _route_values(id: String) -> Dictionary:
 	if id == "artrey":
 		values["artbay_contract_signed"] = true
 		values["project_ownership_proven"] = true
+		values["artbay_repaired"] = true
+	if id == "grok":
+		values["lies_count"] = 0
+		values["affection_grok"] = 3
+	if id == "jbt":
+		values["affection_gpt"] = 3
 	if id == "artbay_bad":
 		values["artbay_control_taken"] = true
 	if id == "instrumental":
@@ -76,8 +82,18 @@ func _ending_line_count(entries: Array, key: String) -> int:
 	return count
 
 func run() -> void:
+	var manager: Variant = root.get_node("AchievementManager")
+	var original_unlocked: Dictionary = manager.unlocked.duplicate(true)
+	var original_path: String = manager.save_path
+	var original_notifications: bool = manager.notifications_enabled
+	var suffix := str(Time.get_ticks_usec())
+	var achievement_path := "res://tests/endings_smoke_achievements_%s.json" % suffix
+	var game_path := "res://tests/endings_smoke_game_%s.json" % suffix
+	manager.save_path = achievement_path
+	manager.unlocked.clear()
+	manager.notifications_enabled = false
 	game = load("res://Prologue.tscn").instantiate()
-	game.save_path = "user://endings_smoke_save.json"
+	game.save_path = game_path
 	root.add_child(game)
 	await process_frame
 	game.call_event_schedule.clear()
@@ -94,7 +110,6 @@ func run() -> void:
 		var line_count := _ending_line_count(entries, expected_scene_key)
 		check(line_count >= 15 and line_count <= 25 or route == "triple" and line_count < 15, route + " has a distinct ending scene with expected length (" + str(line_count) + " lines)")
 		var expected_id: String = "artbay" if route == "artrey" else ("neutral" if route == "solo" else str(route))
-		game.story.decisions["ending_achievement_" + expected_id] = expected_id
 		game.play_chapter_scene("chapter_seven_outro", entries)
 		for choice_id in path:
 			check(_reach_choice(), route + " reaches choice " + choice_id)
@@ -105,6 +120,8 @@ func run() -> void:
 		check(str(game.story.get_value("final_ending", "")) == expected_id, route + " stores the intended final ending id")
 		check(bool(game.story.get_value("chapter_seven_complete", false)), route + " marks chapter seven complete")
 		check(game.mode == "ending", route + " reaches the existing ending screen")
+		var achievement_by_ending := {"grok":"grok_good_ending", "jbt":"jbt_good_ending", "artbay":"artbay_good_ending", "artbay_bad":"artbay_bad_ending", "team":"team_ending", "ministry":"approved_ending", "triple":"triple_affection_ending", "neutral":"neutral_ending", "instrumental":"instrumental_ending"}
+		check(manager.has_achievement(str(achievement_by_ending[expected_id])), route + " unlocks its own ending achievement")
 		var title := CHAPTER.ending_title(expected_id)
 		check(title != "" and CHAPTER.ending_text(expected_id, game.story.values).length() > 20, route + " has a named epilogue")
 		game.show_credits()
@@ -127,11 +144,16 @@ func run() -> void:
 		game.vn.close()
 		game.dialogue_open = false
 		game.story.set_value("chapter_seven_complete", false)
-	var save_file := ProjectSettings.globalize_path("user://endings_smoke_save.json")
+	check(manager.has_achievement("any_ending"), "any ending unlocks its shared achievement")
+	check(manager.has_achievement("all_endings"), "all seven main ending routes unlock the collection achievement")
 	game.queue_free()
 	await process_frame
-	if FileAccess.file_exists("user://endings_smoke_save.json"):
-		DirAccess.remove_absolute(save_file)
+	manager.unlocked = original_unlocked
+	manager.save_path = original_path
+	manager.notifications_enabled = original_notifications
+	for path in [achievement_path, game_path]:
+		if FileAccess.file_exists(path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	if failures.is_empty():
 		print("ENDINGS SMOKE: PASS")
 		quit(0)

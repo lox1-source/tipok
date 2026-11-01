@@ -5,6 +5,9 @@ const DEFAULTS := {
 	"chapter_three_complete":false, "chapter_four_complete":false, "chapter_five_complete":false, "chapter_six_complete":false, "chapter_seven_complete":false, "court_evidence_quality":0, "lied_in_court":false, "affection_grok":0, "affection_gpt":0, "affection_artbay":0,
 	"grok_trust":false, "grok_without_key":false, "gpt_trust":false, "gpt_boundaries":false,
 	"artbay_trust":false, "artbay_trust_level":0, "artbay_suspicion":0,
+	"hotdog_first_visit_seen":false, "hotdog_visit_count":0, "hotdog_order_stage":0, "hotdog_order_choice":"master",
+	"hotdog_repeat_choice_seen":false, "hotdog_trust_choice_seen":false, "hotdog_suspicion_choice_seen":false, "hotdog_suspicion_action":"", "artbay_betrayal":false, "artbay_repaired":false,
+	"old_projects_companion":"", "archive_companion_bond":"", "archive_used_backup":false,
 	"artbay_evidence":false, "project_ownership_proven":false, "game_backup_created":false, "artbay_contract_signed":false, "artbay_control_taken":false, "final_ending":"", "last_build_turns":0,
 	"compared_characters_often":false, "comparison_count":0, "lies_count":0,
 	"learned_blender":false, "bad_key_export":false, "model_game_completed":false,
@@ -31,6 +34,24 @@ func get_value(key: String, fallback: Variant = false) -> Variant:
 
 func set_value(key: String, value: Variant) -> void:
 	values[key] = value
+
+func relationship_state(person: String) -> String:
+	match person:
+		"artrey":
+			if bool(values.get("artbay_betrayal",false)) and not bool(values.get("artbay_repaired",false)):
+				return "разрыв" if str(decisions.get("chapter_six_resolution", "")) == "c6_cut" else "конфликт"
+			if bool(values.get("artbay_repaired",false)): return "партнёрство"
+			if int(values.get("artbay_suspicion",0)) > 0: return "сомнение"
+			return "дружба" if int(values.get("affection_artbay",0)) >= 3 else "знакомство"
+		"grok":
+			if int(values.get("lies_count",0)) >= 2: return "недоверие"
+			if bool(values.get("grok_without_key",false)) and int(values.get("affection_grok",0)) >= 3: return "близость"
+			return "доверие" if int(values.get("affection_grok",0)) >= 3 else "напряжение"
+		"jbt":
+			if bool(values.get("lied_in_court",false)): return "недоверие"
+			if bool(values.get("gpt_boundaries",false)) and int(values.get("affection_gpt",0)) >= 3: return "партнёрство"
+			return "доверие" if int(values.get("affection_gpt",0)) >= 3 else "дистанция"
+	return ""
 
 # Each decision is committed once per playthrough; replaying scenes cannot farm points.
 func decide(key: String, answer: String, deltas: Dictionary = {}, flags: Dictionary = {}) -> bool:
@@ -67,10 +88,20 @@ func import_data(data: Variant) -> void:
 			values["brainstorm_picks"] = raw.brainstorm_picks.filter(func(item: Variant) -> bool: return item is String)
 		if raw.get("project_backup_snapshot") is Dictionary:
 			values.project_backup_snapshot = raw.project_backup_snapshot.duplicate(true)
+		# Older saves already completed the verified contract before the explicit repair flag existed.
+		if not raw.has("artbay_repaired") and bool(values.artbay_contract_signed) and bool(values.project_ownership_proven):
+			values.artbay_repaired = true
 	var choices: Variant = data.get("decisions", {})
 	if choices is Dictionary:
 		for key in choices:
 			if key is String and choices[key] is String:
 				decisions[key] = choices[key]
+	if not values.hotdog_trust_choice_seen and str(decisions.get("hotdog_repeat_choice", "")) in ["hotdog_show", "hotdog_rest"]:
+		values.hotdog_trust_choice_seen = true
+	if not values.hotdog_suspicion_choice_seen and str(decisions.get("hotdog_repeat_choice", "")) in ["hotdog_check", "hotdog_wait"]:
+		values.hotdog_suspicion_choice_seen = true
+		values.hotdog_suspicion_action = str(decisions.hotdog_repeat_choice)
+	if str(decisions.get("chapter_four_backup", "")) == "c4_access" and int(values.artbay_suspicion) == 0:
+		values.artbay_suspicion = 1
 	values.compared_characters_often = int(values.comparison_count) >= 2
 

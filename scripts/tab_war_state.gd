@@ -1,11 +1,10 @@
 extends RefCounted
 
-const DURATION := 180.0
+const DURATION := 120.0
 const COOLDOWN := 1.45
-const PERFECT_WINDOW := 0.35
 const CELL_COUNT := 24
-const TARGET := 20
-const HOLD_SECONDS := 4.0
+const TARGET := 14
+const HOLD_SECONDS := 3.0
 
 var phase := "select"
 var side := "grok"
@@ -19,6 +18,7 @@ var opened := 0
 var closed_enemy := 0
 var closed_own := 0
 var perfects := 0
+var cleanup_charge := 0
 var won := false
 var reason := ""
 var revision := 0
@@ -41,12 +41,13 @@ func start(chosen_side: String) -> void:
 	elapsed = 0.0
 	cooldown_left = 0.0
 	ready_age = 0.0
-	enemy_timer = 1.9
+	enemy_timer = 2.5
 	hold_time = 0.0
 	opened = 0
 	closed_enemy = 0
 	closed_own = 0
 	perfects = 0
+	cleanup_charge = 0
 	won = false
 	reason = ""
 	cells.fill("")
@@ -71,11 +72,13 @@ func spawn_own() -> int:
 	if phase != "running" or cooldown_left > 0.0: return 0
 	var available: int = cells.count("")
 	if available == 0: return 0
-	var perfect := ready_age <= PERFECT_WINDOW
-	var amount := mini(2 if perfect else 1, available)
+	var bonus := cleanup_charge > 0
+	var amount := mini(2 if bonus else 1, available)
 	for i in range(amount): _place(side)
 	opened += amount
-	if perfect: perfects += 1
+	if bonus:
+		perfects += 1
+		cleanup_charge -= 1
 	cooldown_left = COOLDOWN
 	ready_age = 0.0
 	return amount
@@ -83,7 +86,9 @@ func spawn_own() -> int:
 func close_tab(index: int) -> bool:
 	if phase != "running" or index < 0 or index >= CELL_COUNT or cells[index] == "": return false
 	if cells[index] == side: closed_own += 1
-	else: closed_enemy += 1
+	else:
+		closed_enemy += 1
+		cleanup_charge = mini(cleanup_charge + 1, 3)
 	cells[index] = ""
 	if count(side) < TARGET: hold_time = 0.0
 	revision += 1
@@ -102,7 +107,7 @@ func tick(delta: float) -> void:
 			if not own.is_empty():
 				cells[own[rng.randi_range(0,own.size()-1)]] = enemy()
 				revision += 1
-		enemy_timer += lerpf(1.9,1.25,elapsed/DURATION)
+		enemy_timer += lerpf(2.5,1.8,elapsed/DURATION)
 	if count(side) >= TARGET: hold_time += step
 	else: hold_time = 0.0
 	if hold_time >= HOLD_SECONDS: finish(true,"control")
@@ -116,10 +121,10 @@ func finish(victory: bool, why: String) -> void:
 	revision += 1
 
 func result() -> Dictionary:
-	return {"side":side,"won":won,"reason":reason,"elapsed":elapsed,"owned":count(side),"opened":opened,"closed_enemy":closed_enemy,"closed_own":closed_own,"perfects":perfects}
+	return {"side":side,"won":won,"reason":reason,"elapsed":elapsed,"owned":count(side),"opened":opened,"closed_enemy":closed_enemy,"closed_own":closed_own,"perfects":perfects,"cleanup_charge":cleanup_charge}
 
 func snapshot() -> Dictionary:
-	return {"version":1,"phase":phase,"side":side,"cells":cells.duplicate(),"elapsed":elapsed,"cooldown_left":cooldown_left,"ready_age":ready_age,"enemy_timer":enemy_timer,"hold_time":hold_time,"opened":opened,"closed_enemy":closed_enemy,"closed_own":closed_own,"perfects":perfects,"won":won,"reason":reason,"rng_state":str(rng.state)}
+	return {"version":2,"phase":phase,"side":side,"cells":cells.duplicate(),"elapsed":elapsed,"cooldown_left":cooldown_left,"ready_age":ready_age,"enemy_timer":enemy_timer,"hold_time":hold_time,"opened":opened,"closed_enemy":closed_enemy,"closed_own":closed_own,"perfects":perfects,"cleanup_charge":cleanup_charge,"won":won,"reason":reason,"rng_state":str(rng.state)}
 
 func restore(raw: Dictionary) -> void:
 	phase = "select"
@@ -137,12 +142,13 @@ func restore(raw: Dictionary) -> void:
 	elapsed = clampf(float(raw.get("elapsed",0.0)),0.0,DURATION)
 	cooldown_left = clampf(float(raw.get("cooldown_left",0.0)),0.0,COOLDOWN)
 	ready_age = clampf(float(raw.get("ready_age",0.0)),0.0,DURATION)
-	enemy_timer = clampf(float(raw.get("enemy_timer",1.9)),0.01,1.9)
+	enemy_timer = clampf(float(raw.get("enemy_timer",2.5)),0.01,2.5)
 	hold_time = clampf(float(raw.get("hold_time",0.0)),0.0,HOLD_SECONDS)
 	opened = clampi(int(raw.get("opened",0)),0,10000)
 	closed_enemy = clampi(int(raw.get("closed_enemy",0)),0,10000)
 	closed_own = clampi(int(raw.get("closed_own",0)),0,10000)
 	perfects = clampi(int(raw.get("perfects",0)),0,10000)
+	cleanup_charge = clampi(int(raw.get("cleanup_charge",0)),0,3)
 	won = raw.get("won",false) == true
 	reason = str(raw.get("reason",""))
 	if raw.get("rng_state") is String and raw.rng_state.is_valid_int(): rng.state = raw.rng_state.to_int()

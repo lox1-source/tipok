@@ -96,4 +96,8 @@ func _apply_display() -> void:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 		DisplayServer.window_set_size(resolution)
 		var usable := DisplayServer.screen_get_usable_rect(target)
-		DisplayServer.window_set_position(usable.position + (usable.size - resolution) / 2)
+		var centered_offset := Vector2i(
+			floori(float(usable.size.x - resolution.x) / 2.0),
+			floori(float(usable.size.y - resolution.y) / 2.0)
+		)
+		DisplayServer.window_set_position(usable.position + centered_offset)

@@ -8,6 +8,9 @@ const MUSIC_PATHS := {
 	"dialogue": "res://assets/audio/dialogues.ogg",
 	"credits": "res://assets/audio/titri.ogg",
 	"tab_war": "res://assets/audio/tab_war_ost.ogg",
+	"doodle_jump": "res://assets/audio/doodle_jump_ost.ogg",
+	"hotdog_master": "res://assets/audio/hotdog_master_ost.ogg",
+	"old_projects": "res://assets/audio/old_projects_ost.ogg",
 	"wire_puzzle": "res://assets/audio/wire_puzzle_ost.ogg",
 	"file_investigation": "res://assets/audio/file_investigation_ost.ogg",
 	"queue_and_trial": "res://assets/audio/queue_and_trial_ost.ogg"

@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://duj3avpww0la3"]
+
+[ext_resource type="Script" uid="uid://buwdkxx30hewd" path="res://scripts/hotdog_master_location.gd" id="1"]
+
+[node name="HotdogMasterLocation" type="Control" unique_id=834003538]
+process_mode = 1
+layout_mode = 3
+anchors_preset = 0
+offset_right = 960.0
+offset_bottom = 540.0
+script = ExtResource("1")
+
+[node name="WalkAreaPolygon" type="Polygon2D" parent="." unique_id=93787377]
+z_index = 200
+color = Color(0.2, 0.85, 1, 0.24)
+polygon = PackedVector2Array(42, 340, 918, 340, 918, 402, 42, 402)

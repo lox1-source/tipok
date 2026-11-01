@@ -1,9 +1,9 @@
 extends RefCounted
 
 static func line(speaker: String, emotion: String, text: String, key: String = "", next_key: String = "") -> Dictionary:
-	var names := {"grat":"Грат", "grok":"Грок", "jbt":"ЖБТ", "artrey":"Артрей • сообщения", "narrator":"СЦЕНА"}
+	var names := {"grat":"Грат", "grok":"Грок", "jbt":"ЖБТ", "artrey":"Артрей", "narrator":"СЦЕНА"}
 	var portraits := {}
-	if speaker in ["grat", "grok", "jbt"]:
+	if speaker in ["grat", "grok", "jbt", "artrey"]:
 		portraits["left"] = {"speaker_id":"grat", "emotion":emotion if speaker == "grat" else "neutral"}
 		if speaker != "grat":
 			portraits["right"] = {"speaker_id":speaker, "emotion":emotion}

@@ -39,6 +39,10 @@ func run() -> void:
 		check(g.flow == "chapter_computer_boot","The computer action opens a short preparation scene")
 		drive(g,branch)
 		check(g.mode == "tab_war","Every introduction branch reaches the real minigame")
+		for panel in g.tab_war.tutorial.get_children():
+			if panel is Panel:
+				for child in panel.get_children():
+					if child is Button and child.text == "×": child.pressed.emit()
 		g.tab_war.choose_side("grok" if branch != 1 else "jbt")
 		g.tab_war.state.finish(branch == 0,"control" if branch == 0 else "timeout")
 		g.tab_war._changed()

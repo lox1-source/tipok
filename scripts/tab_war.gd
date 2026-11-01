@@ -24,6 +24,8 @@ var result_body: Label
 var last_revision := -1
 var save_clock := 0.0
 var last_phase := ""
+var tutorial: Control
+var tutorial_complete := false
 
 func _ready() -> void:
 	size = Vector2(960,540)
@@ -37,17 +39,45 @@ func _ready() -> void:
 	_build_selection()
 	_build_arena()
 	_build_result()
+	_build_tutorial()
 	_render()
 	MiniGameStyle.apply(self, Color("1a2231"), Color("728aa7"), Color("b8d7e8"))
 
 func open(snapshot: Dictionary = {}) -> void:
 	state.restore(snapshot)
+	tutorial_complete = bool(snapshot.get("tutorial_complete", false)) or state.phase != "select"
 	last_phase = ""
 	last_revision = -1
 	save_clock = 0.0
 	show()
 	_render()
-	checkpoint_changed.emit(state.snapshot())
+	checkpoint_changed.emit(_snapshot())
+
+func _snapshot() -> Dictionary:
+	var result: Dictionary = state.snapshot()
+	result["tutorial_complete"] = tutorial_complete
+	return result
+
+func _build_tutorial() -> void:
+	tutorial = _screen()
+	var shade := ColorRect.new()
+	shade.size = size
+	shade.color = Color(0.04,0.035,0.07,0.98)
+	tutorial.add_child(shade)
+	_label(tutorial,"СНАЧАЛА ПОПРОБУЙ",Vector2(165,85),Vector2(630,42),26,Color("f1e7ff"))
+	_label(tutorial,"Нажми × на чужой вкладке. В настоящем раунде так ты освобождаешь место для своих.",Vector2(165,150),Vector2(630,65),18)
+	var practice := Panel.new()
+	practice.position = Vector2(270,245)
+	practice.size = Vector2(420,90)
+	practice.add_theme_stylebox_override("panel",_style(Color("2c1728"),Color("ac5d85")))
+	tutorial.add_child(practice)
+	_label(practice,"ЧУЖАЯ ВКЛАДКА",Vector2(18,16),Vector2(310,50),17)
+	_button(practice,"×",Vector2(350,16),Vector2(54,48),func():
+		tutorial_complete = true
+		_render()
+		checkpoint_changed.emit(_snapshot())
+	)
+	_label(tutorial,"Время не идёт. После тренировки выбери сторону.",Vector2(165,390),Vector2(630,35),15,Color("bfb1cd"))
 
 func _label(parent: Node, text: String, pos: Vector2, area: Vector2, font: int = 15, color: Color = Color("e5ddec")) -> Label:
 	var label := Label.new()
@@ -94,20 +124,20 @@ func _screen() -> Control:
 func _build_selection() -> void:
 	selection = _screen()
 	_label(selection,"Выбери сторону",Vector2(190,105),Vector2(580,48),29)
-	_label(selection,"Займи минимум 20 из 24 мест своими вкладками и удержи их 4 секунды.\nРаунд длится до 3 минут. Соперник постепенно ускоряется.",Vector2(190,160),Vector2(580,70),17)
+	_label(selection,"Займи 14 из 24 мест своими вкладками и удержи их 3 секунды.\nНа раунд есть 2 минуты. Поражение не закрывает сюжет.",Vector2(190,160),Vector2(580,70),17)
 	_button(selection,"1 · Грок\nБордовые вкладки",Vector2(190,252),Vector2(278,92),func(): choose_side("grok"))
 	_button(selection,"2 · ЖБТ\nМятные вкладки",Vector2(488,252),Vector2(278,92),func(): choose_side("jbt"))
-	_label(selection,"Пробел / кнопка — создать вкладку после перезарядки.\nПервые 0,35 с готовности дают сразу две вкладки.\nКрестики — закрыть чужие. Не перепутай со своими!\nЕсли экран полон, соперник перехватывает твои места.",Vector2(190,366),Vector2(580,90),16)
+	_label(selection,"Крестик на чужой вкладке — место и заряд.\nПробел / кнопка — создать свою вкладку. С зарядом сразу две.\nКрестик на своей вкладке тоже её удалит.\nЕсли экран полон, соперник перехватывает места.",Vector2(190,366),Vector2(580,90),16)
 	_label(selection,"Выбор стороны относится к раунду. Он не закрепляет романтический маршрут.",Vector2(190,470),Vector2(580,48),13,Color("a99bb9"))
 
 func _build_arena() -> void:
 	arena = _screen()
 	_label(arena,"Закрывай чужие крестиками и вовремя создавай свои вкладки",Vector2(42,61),Vector2(850,25),16)
 	stats = _label(arena,"",Vector2(42,94),Vector2(720,26),16)
-	clock = _label(arena,"03:00",Vector2(821,87),Vector2(100,34),24,Color("e4cc9f"))
+	clock = _label(arena,"02:00",Vector2(821,87),Vector2(100,34),24,Color("e4cc9f"))
 	for index in range(state.CELL_COUNT):
 		var panel := Panel.new()
-		panel.position = Vector2(42+(index%6)*146,132+(index/6)*70)
+		panel.position = Vector2(42+(index%6)*146,132+floori(float(index)/6.0)*70)
 		panel.size = Vector2(142,65)
 		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		arena.add_child(panel)
@@ -151,14 +181,15 @@ func _build_result() -> void:
 	_label(ending,"Результат раунда сохранён. Победа помогает выбранной стороне; поражение не блокирует историю.",Vector2(130,469),Vector2(700,50),14,Color("a99bb9"))
 
 func choose_side(side: String) -> void:
+	if not tutorial_complete: return
 	state.start(side)
-	message.text = "Новая вкладка готова. Пробел — поймай бонус!"
+	message.text = "Закрой чужую вкладку: получишь заряд на две свои."
 	_changed()
 
 func spawn() -> void:
 	var amount: int = state.spawn_own()
 	if amount > 0:
-		message.text = "Точное нажатие! Две свои вкладки." if amount == 2 else "Своя вкладка открыта. Готовь следующее нажатие."
+		message.text = "Заряд использован: открыты две свои вкладки." if amount == 2 else "Своя вкладка открыта. Закрой чужую для бонуса."
 	elif state.cooldown_left > 0.0:
 		message.text = "Перезарядка ещё идёт — пока закрой чужие вкладки."
 	else:
@@ -168,7 +199,7 @@ func spawn() -> void:
 func close_slot(index: int) -> void:
 	var own: bool = state.cells[index] == state.side
 	if state.close_tab(index):
-		message.text = "Это была твоя вкладка!" if own else "Чужая вкладка закрыта. Освободи место для своих."
+		message.text = "Это была твоя вкладка!" if own else "Чужая вкладка закрыта. Заряд на две свои готов."
 		_changed()
 
 func _continue_story() -> void:
@@ -176,7 +207,7 @@ func _continue_story() -> void:
 
 func _changed() -> void:
 	_render()
-	checkpoint_changed.emit(state.snapshot())
+	checkpoint_changed.emit(_snapshot())
 
 func _process(delta: float) -> void:
 	if not visible or state.phase != "running": return
@@ -185,24 +216,25 @@ func _process(delta: float) -> void:
 	save_clock += delta
 	if save_clock >= 1.0 or state.phase == "result":
 		save_clock = 0.0
-		checkpoint_changed.emit(state.snapshot())
+		checkpoint_changed.emit(_snapshot())
 
 func _render() -> void:
 	if not is_instance_valid(arena): return
-	selection.visible = state.phase == "select"
+	tutorial.visible = state.phase == "select" and not tutorial_complete
+	selection.visible = state.phase == "select" and tutorial_complete
 	arena.visible = state.phase == "running"
 	ending.visible = state.phase == "result"
 	if state.phase == "running":
 		var remaining := maxi(0,int(ceil(state.DURATION-state.elapsed)))
-		clock.text = "%02d:%02d" % [remaining/60,remaining%60]
+		clock.text = "%02d:%02d" % [floori(float(remaining)/60.0),remaining%60]
 		var side_name := "Грок" if state.side == "grok" else "ЖБТ"
 		stats.text = "Твоя сторона: %s    ·    Свои: %d / 24    ·    Чужие: %d" % [side_name,state.count(state.side),state.count(state.enemy())]
 		cooldown_bar.value = state.COOLDOWN-state.cooldown_left
 		if state.cooldown_left > 0.0:
 			spawn_button.text = "Перезарядка %.1f с · Пробел" % state.cooldown_left
 		else:
-			spawn_button.text = "БОНУС ×2 · Пробел" if state.ready_age <= state.PERFECT_WINDOW else "Открыть свою вкладку · Пробел"
-		hold_label.text = "Удержание: %.1f / 4 с" % state.hold_time if state.count(state.side) >= state.TARGET else "Цель: 20 своих вкладок и 4 с контроля"
+			spawn_button.text = "ЗАРЯД ×2 · Пробел" if state.cleanup_charge > 0 else "Открыть свою вкладку · Пробел"
+		hold_label.text = "Удержание: %.1f / 3 с" % state.hold_time if state.count(state.side) >= state.TARGET else "Цель: 14 своих вкладок и 3 с контроля"
 		control_bar.value = state.hold_time
 	if last_revision != state.revision:
 		for i in range(state.CELL_COUNT):
@@ -217,7 +249,7 @@ func _render() -> void:
 	if state.phase == "result" and last_phase != "result":
 		result_title.text = "Экран под контролем!" if state.won else "Раунд завершён"
 		var why := "Время вышло." if state.reason == "timeout" else ("Раунд завершён досрочно." if state.reason == "surrender" else "Ты удержал экран своей стороны.")
-		result_body.text = why + "\n\nСторона: " + ("Грок" if state.side == "grok" else "ЖБТ") + "\nСвои вкладки: %d / 24 · Закрыто чужих: %d\nТочных нажатий: %d · Своих закрыто по ошибке: %d" % [state.count(state.side),state.closed_enemy,state.perfects,state.closed_own]
+		result_body.text = why + "\n\nСторона: " + ("Грок" if state.side == "grok" else "ЖБТ") + "\nСвои вкладки: %d / 24 · Закрыто чужих: %d\nБонусов использовано: %d · Своих закрыто по ошибке: %d" % [state.count(state.side),state.closed_enemy,state.perfects,state.closed_own]
 	last_phase = state.phase
 
 func _unhandled_input(event: InputEvent) -> void:

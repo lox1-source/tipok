@@ -15,7 +15,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="Типочек: Ключ"
-config/version="0.2.0-beta"
+config/version="1.0.0"
 config/icon="res://assets/ui/app-icon.png"
 config/description="Top-down pixel-art adventure prototype with an in-game computer."
 run/main_scene="res://Disclaimer.tscn"

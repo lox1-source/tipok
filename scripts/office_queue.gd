@@ -34,7 +34,7 @@ func _ready() -> void:
 	_label(self,"МИНИСТЕРСТВО КЛЮЧЕВЫХ ДЕЛ · ОКОШКО 404",Vector2(32,14),Vector2(740,34),22,Color("f3d7ab"))
 	_button(self,"Пауза",Vector2(850,16),Vector2(82,30),func(): pause_requested.emit())
 	_label(self,"Всего три дела · каждый талон решается одним документом в одном окне",Vector2(34,51),Vector2(700,25),14,Color("b8b3c2"))
-	_button(self,"Как играть?",Vector2(780,51),Vector2(145,27),_show_tutorial)
+	_button(self,"Как играть?",Vector2(690,16),Vector2(145,30),_show_tutorial)
 	for i in range(Model.CASES.size()):
 		var b := Button.new()
 		b.position = Vector2(150 + i * 220,86)
@@ -43,9 +43,9 @@ func _ready() -> void:
 		b.pressed.connect(func(index: int = i): _select_ticket(index))
 		add_child(b)
 		ticket_buttons.append(b)
-	case_detail_label = _label(self,"",Vector2(42,179),Vector2(876,22),13,Color("f0dba9"))
+	case_detail_label = _label(self,"",Vector2(42,179),Vector2(876,22),12,Color("f0dba9"))
 	_panel(self,Vector2(32,204),Vector2(896,82),Color("201c2a"))
-	_label(self,"ДОКУМЕНТ · выбери один",Vector2(44,208),Vector2(300,20),12,Color("d7c5e8"))
+	_label(self,"ШАГ 2 · ВЛОЖИ ОДИН ДОКУМЕНТ",Vector2(44,208),Vector2(360,20),12,Color("d7c5e8"))
 	var doc_ids := ["error","key_txt","history"]
 	for i in range(doc_ids.size()):
 		var id: String = doc_ids[i]
@@ -57,7 +57,7 @@ func _ready() -> void:
 		add_child(b)
 		document_buttons[id] = b
 	_panel(self,Vector2(32,294),Vector2(896,119),Color("1a2026"))
-	_label(self,"ВЫБЕРИ ОКНО · на кнопке указаны его требования",Vector2(44,298),Vector2(580,20),12,Color("a9d6d0"))
+	_label(self,"ШАГ 3 · ПОДАЙ ДОКУМЕНТ В ПОДХОДЯЩЕЕ ОКНО",Vector2(44,298),Vector2(620,20),12,Color("a9d6d0"))
 	var windows := [
 		{"id":"intake","title":"Окно 1","rule":"Скрин ERROR сюда"},
 		{"id":"review","title":"Окно 2","rule":"key.txt сюда"},
@@ -95,7 +95,9 @@ func open(snapshot: Dictionary = {}) -> void:
 	save_clock = 0.0
 	result_panel.hide()
 	tutorial_step = 0
-	tutorial_panel.visible = not state.tutorial_seen
+	# Enter the queue immediately. The guided exercise remains available from
+	# “Как играть?” instead of covering the actual game on every fresh launch.
+	tutorial_panel.hide()
 	_update_tutorial()
 	show()
 	_render()
@@ -146,7 +148,9 @@ func _render() -> void:
 	for i in range(ticket_buttons.size()):
 		var ticket: Dictionary = state.tickets[i]
 		var status := "ЖДЁТ ТЕБЯ" if ticket.status == "waiting" else "ПРИНЯТО ✓"
-		ticket_buttons[i].text = "%s\n%s\n%s" % [ticket.title,status,"✓" if i == state.selected and ticket.status == "waiting" else ""]
+		var document_name: String = Model.DOCUMENT_LABELS[str(ticket.document)]
+		var window_number := i + 1
+		ticket_buttons[i].text = "%s\nДокумент: %s\n→ Окно %d · %s" % [ticket.title,document_name,window_number,status]
 		ticket_buttons[i].disabled = ticket.status != "waiting"
 		var color := Color("453445") if i == state.selected and ticket.status == "waiting" else (Color("263b35") if ticket.status == "approved" else (Color("30282c") if ticket.status == "lost" else Color("282431")))
 		ticket_buttons[i].add_theme_stylebox_override("normal",_style(color))
@@ -158,7 +162,8 @@ func _render() -> void:
 		if state.selected_documents.has(id): b.text = "✓ " + b.text
 		b.add_theme_stylebox_override("normal",_style(Color("65513a") if state.selected_documents.has(id) else Color("302b38")))
 	var ticket: Dictionary = state.tickets[state.selected]
-	case_detail_label.text = "Требование: " + str(ticket.request)
+	var ticket_number: int = state.selected + 1
+	case_detail_label.text = "Цепочка талона %d: %s → %s → Окно %d" % [ticket_number,ticket.title,Model.DOCUMENT_LABELS[str(ticket.document)],ticket_number]
 	info_label.text = "Принято: %d / 3 · Ошибки: %d\n%s\nПротокол 0: %s" % [state.approved,state.wrong_attempts,state.message,"найден" if state.protocol_found else "не найден"]
 	for id in window_buttons:
 		window_buttons[id].disabled = state.finished or ticket.status != "waiting"

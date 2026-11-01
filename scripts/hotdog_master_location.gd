@@ -25,7 +25,7 @@ const HOTSPOTS := [
 	{"id":"menu", "name":"Меню у окна", "position":Vector2(692, 354)},
 	{"id":"drinks", "name":"Холодильник с напитками", "position":Vector2(290, 385)},
 	{"id":"bench", "name":"Лавка у тротуара", "position":Vector2(128, 405)},
-	{"id":"artrey", "name":"поговорить с Артреем", "position":Vector2(458, 405)}
+	{"id":"artrey", "name":"поговорить с Артбеем", "position":Vector2(458, 405)}
 ]
 
 var player_position := PLAYER_SPAWN
@@ -87,7 +87,7 @@ func _ready() -> void:
 	artrey_sprite.scale = Vector2(0.16,0.16)
 	artrey_sprite.position = ARTREY_POSITION
 	add_child(artrey_sprite)
-	var npc_marker := _label(self,"АРТРЕЙ",ARTREY_POSITION + Vector2(-41,-95),Vector2(82,21),13,Color("fff0c7"))
+	var npc_marker := _label(self,"АРТБЕЙ",ARTREY_POSITION + Vector2(-41,-95),Vector2(82,21),13,Color("fff0c7"))
 	npc_marker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	kiosk_hud_nodes.append(npc_marker)
 	status_label = _label(self,"Свежий воздух. Не BIOS. Даже очередь пока человеческая.",Vector2(24,481),Vector2(650,29),15,Color("f1e8f8"))
@@ -169,7 +169,7 @@ func open(checkpoint: Dictionary = {}, first_visit: bool = true, record_checkpoi
 			player_position = _constrain_to_walk_area(PLAYER_SPAWN)
 	player.position = player_position
 	_update_depth_order()
-	status_label.text = "Первый выход из BIOS. Подойди к Артрею и нажми E, чтобы поговорить." if first_visit else "Вернулся к киоску. Подойди к Артрею или осмотрись вокруг."
+	status_label.text = "Первый выход из BIOS. Подойди к Артбею и нажми E, чтобы поговорить." if first_visit else "Вернулся к киоску. Подойди к Артбею или осмотрись вокруг."
 	show()
 	_update_nearest()
 	if record_checkpoint:
@@ -240,7 +240,7 @@ func show_order_menu() -> void:
 	emblem.scale = Vector2(0.052,0.052)
 	emblem.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	board.add_child(emblem)
-	_label(board,"Артрей уже взял два. Выбери хот-дог для Грата.",Vector2(24,51),Vector2(608,25),13,Color("4d2b28"))
+	_label(board,"Артбей уже взял два. Выбери хот-дог для 4fr.",Vector2(24,51),Vector2(608,25),13,Color("4d2b28"))
 	var items := [
 		["Одинарный", "65 ₽", "Классика без сюрпризов."],
 		["Двойной", "82 ₽", "Две сосиски, один вопрос."],
@@ -278,7 +278,7 @@ func show_order_menu() -> void:
 		_label(pick,str(item[2]),Vector2(100,43),Vector2(188,28),11,Color("653b31"))
 		if i == 2:
 			pick.grab_focus.call_deferred()
-	order_feedback = _label(board,"Выбери любую позицию. Артрей свои два уже взял.",Vector2(24,327),Vector2(608,54),14,Color("542823"))
+	order_feedback = _label(board,"Выбери любую позицию. Артбей свои два уже взял.",Vector2(24,327),Vector2(608,54),14,Color("542823"))
 
 func hide_order_menu() -> void:
 	if is_instance_valid(order_overlay):
@@ -313,9 +313,9 @@ func _interact() -> void:
 		observed.append(nearest_id)
 	match nearest_id:
 		"window": status_label.text = "Заказ без квеста: хот-дог можно взять, но для сюжета это необязательно."
-		"menu": status_label.text = "Артрей снова заказал «как обычно». Продавец спросил, что именно это значит."
+		"menu": status_label.text = "Артбей снова заказал «как обычно». Продавец спросил, что именно это значит."
 		"drinks": status_label.text = "Холодильник гудит громче компьютера. Хорошо хоть пароль не спрашивает."
-		"bench": status_label.text = "На лавке Артрей обычно рассказывает про идеи. Сегодня можно говорить и не о проекте."
+		"bench": status_label.text = "На лавке Артбей обычно рассказывает про идеи. Сегодня можно говорить и не о проекте."
 	if not first_time:
 		status_label.text += " Это место ты уже осматривал."
 	checkpoint_changed.emit(snapshot())
@@ -323,7 +323,7 @@ func _interact() -> void:
 
 func _request_return() -> void:
 	if chapter_first_visit:
-		status_label.text = "Перед возвращением поговори с Артреем у окна. Он ждёт тебя после BIOS."
+		status_label.text = "Перед возвращением поговори с Артбеем у окна. Он ждёт тебя после BIOS."
 		return
 	return_requested.emit()
 

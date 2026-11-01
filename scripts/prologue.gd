@@ -83,45 +83,45 @@ const DIALOGUE_TIME := preload("res://scripts/story_dialogue.gd")
 
 const FLOW := {
 	"intro": [
-		"[b]03:47. КОМНАТА ГРАТА.[/b]\nСегодня Грат хочет запустить свою первую игру: комнату с запертой дверью. Осталось сделать ключ.",
-		"[b]ГРАТ[/b]\nКомната есть. Дверь есть. Ключ сделаю сейчас. Я вообще по идеям.",
-		"[b]ТЕЛЕФОН[/b]\nСначала Грат расскажет друзьям о проекте. Телефон лежит на тумбочке возле пиццы."
+		"[b]03:47. КОМНАТА 4fr.[/b]\nСегодня 4fr хочет запустить свою первую игру: комнату с запертой дверью. Осталось сделать ключ.",
+		"[b]4fr[/b]\nКомната есть. Дверь есть. Ключ сделаю сейчас. Я вообще по идеям.",
+		"[b]ТЕЛЕФОН[/b]\nСначала 4fr расскажет друзьям о проекте. Телефон лежит на тумбочке возле пиццы."
 	],
 	"voice": [
-		"[b]ГРАТ ЗАПИСЫВАЕТ ГОЛОСОВОЕ[/b]\n«Короче, делаю игру. Авторский проект. Всё сам».\nОн отправляет его в игровой чат друзей.",
-		"[b]ВТОРОЙ МОНИТОР[/b]\nЖБТ: «Теперь нажми “Создать проект”».\nГрат аккуратно сворачивает окно. Чтобы не отвлекало от авторского проекта."
+		"[b]4fr ЗАПИСЫВАЕТ ГОЛОСОВОЕ[/b]\n«Короче, делаю игру. Авторский проект. Всё сам».\nОн отправляет его в игровой чат друзей.",
+		"[b]ВТОРОЙ МОНИТОР[/b]\nЖБТ: «Теперь нажми “Создать проект”».\n4fr аккуратно сворачивает окно. Чтобы не отвлекало от авторского проекта."
 	],
 	"project": [
 		"[b]МОЯ ИГРА → ЗАПУСК[/b]\nПерсонаж доходит до двери. Она не открывается. На экране появляется ошибка.",
 		"[b][color=#f2a1a1]ERROR: key.glb отсутствует[/color][/b]\nДля продолжения разработки создайте или импортируйте модель ключа.",
-		"[b]ГРАТ[/b]\nОдин сраный ключ. Сейчас сам сделаю. Где тут этот Blender?"
+		"[b]4fr[/b]\nОдин сраный ключ. Сейчас сам сделаю. Где тут этот Blender?"
 	],
 	"blender": [
-		"[b]ГРАТ[/b]\nЭто куб.\n\nГрат некоторое время смотрит на куб. Куб смотрит в ответ.",
-		"[b]ГРАТ[/b]\nЯ вообще по идеям.\nОн закрывает Blender и открывает ЖБТ."
+		"[b]4fr[/b]\nЭто куб.\n\n4fr некоторое время смотрит на куб. Куб смотрит в ответ.",
+		"[b]4fr[/b]\nЯ вообще по идеям.\nОн закрывает Blender и открывает ЖБТ."
 	],
 	"help": [
-		"[b]ГРАТ → ЖБТ[/b]\nСделай ключ для игры. Обычный. Чтоб дверь открывал.",
+		"[b]4fr → ЖБТ[/b]\nСделай ключ для игры. Обычный. Чтоб дверь открывал.",
 		"[b]ЖБТ[/b]\nВот скрипт для Blender. Вставь его во вкладку Scripting и нажми Run Script.",
-		"[b]ГРАТ[/b]\nВставить код. Понял.\nГрат копирует скрипт и открывает поиск Windows."
+		"[b]4fr[/b]\nВставить код. Понял.\n4fr копирует скрипт и открывает поиск Windows."
 	],
 	"search": [
 		"[b]ПОИСК[/b]\nПо вашему запросу ничего не найдено.\nПопробуйте изменить формулировку.",
-		"[b]ГРАТ[/b]\nНе работает. Ты опять хуйню дала.\nГрат пишет ЖБТ, не проверив, куда вставил код."
+		"[b]4fr[/b]\nНе работает. Ты опять хуйню дала.\n4fr пишет ЖБТ, не проверив, куда вставил код."
 	],
 	"complain": [
-		"[b]ГРАТ → ЖБТ[/b]\nЯ вставил код. Поиск ничего не нашёл.",
+		"[b]4fr → ЖБТ[/b]\nЯ вставил код. Поиск ничего не нашёл.",
 		"[b]ЖБТ[/b]\nКод нужно запускать в Blender. Это не поисковый запрос.",
-		"[b]ГРАТ[/b]\nЯсно. Это я не туда вставил.\nНо вместо Blender он опять открывает чат ЖБТ."
+		"[b]4fr[/b]\nЯсно. Это я не туда вставил.\nНо вместо Blender он опять открывает чат ЖБТ."
 	],
 	"prompt": [
-		"[b]ГРАТ → ЖБТ[/b]\nКак написать другой нейросети, чтобы она сделала нормально?",
+		"[b]4fr → ЖБТ[/b]\nКак написать другой нейросети, чтобы она сделала нормально?",
 		"[b]ЖБТ[/b]\nВот сообщение, которое можно отправить Grok:\n«Привет! Нужна 3D-модель обычного дверного ключа в формате GLB для моей игры». ",
-		"[b]ГРАТ[/b]\nВо. Другое дело.\n\nОн копирует весь ответ. Вместе с «Вот сообщение, которое можно отправить Grok»."
+		"[b]4fr[/b]\nВо. Другое дело.\n\nОн копирует весь ответ. Вместе с «Вот сообщение, которое можно отправить Grok»."
 	],
 	"grok": [
-		"[b]НОВАЯ ВКЛАДКА[/b]\nСообщение готово. Осталось познакомиться.\n\nГрат поправляет футболку перед монитором.",
-		"[b]ГРАТ[/b]\nНу эта-то точно сделает.\n\nНа экране появляется надпись: «Grok печатает…»"
+		"[b]НОВАЯ ВКЛАДКА[/b]\nСообщение готово. Осталось познакомиться.\n\n4fr поправляет футболку перед монитором.",
+		"[b]4fr[/b]\nНу эта-то точно сделает.\n\nНа экране появляется надпись: «Grok печатает…»"
 	]
 }
 
@@ -464,13 +464,13 @@ func _show_polaroid_easter_egg() -> void:
 	var entries: Array
 	if first_view:
 		entries = [
-			{"speaker_id":"grat","speaker":"Грат","emotion":"surprised","text":"Как она вообще мне дала? У меня же ебануто воняет изо рта."},
+			{"speaker_id":"grat","speaker":"4fr","emotion":"surprised","text":"Как она вообще мне дала? У меня же ебануто воняет изо рта."},
 			{"speaker_id":"jbt","speaker":"ЖБТ","emotion":"happy","text":"Может, она просто задержала дыхание."},
-			{"speaker_id":"grat","speaker":"Грат","emotion":"embarrassed","text":"Вот это я понимаю — взаимность."}
+			{"speaker_id":"grat","speaker":"4fr","emotion":"embarrassed","text":"Вот это я понимаю — взаимность."}
 		]
 	else:
 		entries = [
-			{"speaker_id":"grat","speaker":"Грат","emotion":"neutral","text":"Снимок всё такой же. А запах, к счастью, внутрь не записался."}
+			{"speaker_id":"grat","speaker":"4fr","emotion":"neutral","text":"Снимок всё такой же. А запах, к счастью, внутрь не записался."}
 		]
 	flow = "polaroid_easter_egg"
 	mode = "dialogue"
@@ -768,7 +768,7 @@ func refresh_goal() -> void:
 		_refresh_hud_visibility()
 		return
 	if active_chapter == 5:
-		goal_label.text = "Глава 5 завершена · Артрей предлагает договор" if story.get_value("chapter_five_complete") else ("Глава 5 · подойди к компьютеру и подготовь дело" if chapter_computer_pending == 5 else "Глава 5 · ответь на обвинения суда")
+		goal_label.text = "Глава 5 завершена · Артбей предлагает договор" if story.get_value("chapter_five_complete") else ("Глава 5 · подойди к компьютеру и подготовь дело" if chapter_computer_pending == 5 else "Глава 5 · ответь на обвинения суда")
 		clock_location = "судья-принтер"
 		_update_clock_display()
 		_refresh_hud_visibility()
@@ -786,8 +786,8 @@ func refresh_goal() -> void:
 		_refresh_hud_visibility()
 		return
 	if active_chapter == 2:
-		goal_label.text = "Глава 2 завершена · key.txt получен" if chapter_two_complete else ("Глава 2 · составь с Артреем короткий план" if story.get_value("artbay_intro_seen") else "Глава 2 · встреться с Артреем у киоска" if story.get_value("grok_date_completed") else "Глава 2 · подойди к компьютеру и открой BIOS" if chapter_computer_pending == 2 else "Глава 2 · свидание в BIOS")
-		clock_location = "Артрей на связи" if story.get_value("grok_date_completed") else "BIOS"
+		goal_label.text = "Глава 2 завершена · key.txt получен" if chapter_two_complete else ("Глава 2 · составь с Артбеем короткий план" if story.get_value("artbay_intro_seen") else "Глава 2 · встреться с Артбеем у киоска" if story.get_value("grok_date_completed") else "Глава 2 · подойди к компьютеру и открой BIOS" if chapter_computer_pending == 2 else "Глава 2 · свидание в BIOS")
+		clock_location = "Артбей на связи" if story.get_value("grok_date_completed") else "BIOS"
 		_update_clock_display()
 		_refresh_hud_visibility()
 		return
@@ -815,7 +815,7 @@ func show_menu() -> void:
 	clear_panel(app_panel)
 	text_at(app_panel,"ПРОЛОГ",Vector2(32,28),Vector2(680,25),14,Color("bca1cd"))
 	text_at(app_panel,"Творческий директор",Vector2(32,77),Vector2(690,58),32)
-	text_at(app_panel,"Одна комната. Одна дверь. Один отсутствующий key.glb.\nГрат делает свою первую игру. Всё сам. Почти.",Vector2(32,161),Vector2(680,100),19)
+	text_at(app_panel,"Одна комната. Одна дверь. Один отсутствующий key.glb.\n4fr делает свою первую игру. Всё сам. Почти.",Vector2(32,161),Vector2(680,100),19)
 	button_at(app_panel,"Начать" if not intro_seen else "Продолжить",Vector2(32,302),Vector2(212,46),resume_game)
 	if intro_seen:
 		button_at(app_panel,"С начала",Vector2(264,302),Vector2(180,46),confirm_restart)
@@ -829,12 +829,12 @@ func start_vn_demo() -> void:
 	app_panel.hide()
 	inventory_panel.hide()
 	var demo: Array = [
-		{"speaker_id":"grat", "speaker":"Грат", "emotion":"neutral", "side":"left", "text":"ЖБТ, смотри: я наконец-то собрал сцену. Даже свет включил.", "portraits":{"left":{"speaker_id":"grat", "emotion":"neutral"}, "right":{"speaker_id":"jbt", "emotion":"happy"}}},
+		{"speaker_id":"grat", "speaker":"4fr", "emotion":"neutral", "side":"left", "text":"ЖБТ, смотри: я наконец-то собрал сцену. Даже свет включил.", "portraits":{"left":{"speaker_id":"grat", "emotion":"neutral"}, "right":{"speaker_id":"jbt", "emotion":"happy"}}},
 		{"speaker_id":"jbt", "speaker":"ЖБТ", "emotion":"happy", "side":"right", "text":"Вижу! Теперь выбери, что делать с ключом.", "portraits":{"left":{"speaker_id":"grat", "emotion":"happy"}, "right":{"speaker_id":"jbt", "emotion":"happy"}}, "choices":[{"text":"Сделать его самому", "id":"self", "next":2}, {"text":"Спросить Грока", "id":"grok", "next":3}]},
-		{"speaker_id":"grat", "speaker":"Грат", "emotion":"embarrassed", "side":"left", "text":"Сам. Конечно сам. Просто сначала посмотрю один туториал…", "portraits":{"left":{"speaker_id":"grat", "emotion":"embarrassed"}, "right":{"speaker_id":"jbt", "emotion":"neutral"}}},
+		{"speaker_id":"grat", "speaker":"4fr", "emotion":"embarrassed", "side":"left", "text":"Сам. Конечно сам. Просто сначала посмотрю один туториал…", "portraits":{"left":{"speaker_id":"grat", "emotion":"embarrassed"}, "right":{"speaker_id":"jbt", "emotion":"neutral"}}},
 		{"speaker_id":"grok", "speaker":"Грок", "emotion":"surprised", "side":"right", "text":"О, вы всё-таки позвали меня? Я уже приготовила дерзкий ответ и нормальный пайплайн.", "portraits":{"left":{"speaker_id":"grat", "emotion":"afraid"}, "right":{"speaker_id":"grok", "emotion":"surprised"}}, "choices":[{"text":"Попросить спокойно", "id":"calm", "next":4}, {"text":"Сделать вид, что так и планировал", "id":"bluff", "next":5}]},
 		{"speaker_id":"jbt", "speaker":"ЖБТ", "emotion":"happy", "side":"right", "text":"Хороший выбор. Я подсвечу следующий шаг, а не буду делать его за тебя.", "portraits":{"left":{"speaker_id":"grat", "emotion":"happy"}, "right":{"speaker_id":"jbt", "emotion":"happy"}}},
-		{"speaker_id":"grat", "speaker":"Грат", "emotion":"afraid", "side":"left", "text":"Я это с самого начала и планировал. Просто план был… гибкий.", "portraits":{"left":{"speaker_id":"grat", "emotion":"afraid"}, "right":{"speaker_id":"grok", "emotion":"angry"}}},
+		{"speaker_id":"grat", "speaker":"4fr", "emotion":"afraid", "side":"left", "text":"Я это с самого начала и планировал. Просто план был… гибкий.", "portraits":{"left":{"speaker_id":"grat", "emotion":"afraid"}, "right":{"speaker_id":"grok", "emotion":"angry"}}},
 		{"speaker_id":"grok", "speaker":"Грок", "emotion":"happy", "side":"right", "text":"Вот теперь разговор. Портреты сменяются плавно, кнопки работают, а история остаётся за тобой.", "portraits":{"left":{"speaker_id":"grat", "emotion":"happy"}, "right":{"speaker_id":"grok", "emotion":"happy"}}}
 	]
 	_start_dialogue_entries(demo)
@@ -1054,7 +1054,7 @@ func _interact() -> void:
 			AchievementManager.unlock_achievement("room_explorer")
 	if chapter_one_stage == 1 and preload("res://scripts/chapter_one.gd").EVIDENCE.has(nearby_object):
 		if chapter_one_evidence.has(nearby_object):
-			optional(["[b]ГРАТ[/b]\nЭто доказательство уже приобщено к делу. Виноватым остался я."])
+			optional(["[b]4fr[/b]\nЭто доказательство уже приобщено к делу. Виноватым остался я."])
 		else:
 			pending_evidence = nearby_object
 			play_chapter_scene("chapter_one_evidence", preload("res://scripts/chapter_one.gd").evidence(nearby_object))
@@ -1139,7 +1139,7 @@ func _start_dialogue_entries(entries_to_play: Array, start_index: int = 0) -> vo
 	current_lines = []
 	for item in dialogue_entries:
 		if item is Dictionary:
-			if str(item.get("speaker", "")).begins_with("Артрей"):
+			if str(item.get("speaker", "")).begins_with("Артбей"):
 				item["speaker_id"] = "artrey"
 			current_lines.append(str(item.get("text", "")))
 	vn_entries = dialogue_entries
@@ -1178,7 +1178,7 @@ func _is_artrey_phone_conversation(entries: Array) -> bool:
 			continue
 		var speaker_id := str(item.get("speaker_id", ""))
 		var speaker_name := str(item.get("speaker", ""))
-		if speaker_id == "artrey" or speaker_name.begins_with("Артрей"):
+		if speaker_id == "artrey" or speaker_name.begins_with("Артбей"):
 			has_artrey = true
 		if speaker_id in ["grok", "jbt"] or speaker_name.begins_with("Грок") or speaker_name.begins_with("ЖБТ"):
 			return false
@@ -1214,9 +1214,9 @@ func _entries_from_lines(lines: Array[String]) -> Array:
 			speaker_id = "jbt"
 			speaker_name = "ЖБТ"
 			side = "right"
-		elif "ГРАТ" in upper:
+		elif "4FR" in upper or "ГРАТ" in upper:
 			speaker_id = "grat"
-			speaker_name = "Грат"
+			speaker_name = "4fr"
 			side = "left"
 		var emotion := "neutral"
 		if "хуйню" in body.to_lower() or "не работает" in body.to_lower() or "ноль" in body.to_lower():
@@ -1480,7 +1480,7 @@ func show_desktop() -> void:
 	top_bar.color=Color(0.05,0.04,0.09,0.85)
 	top_bar.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	computer_panel.add_child(top_bar)
-	text_at(computer_panel,"ГРАТ OS",Vector2(18,11),Vector2(150,24),17)
+	text_at(computer_panel,"4fr OS",Vector2(18,11),Vector2(150,24),17)
 	text_at(computer_panel,"Личный компьютер / Творческий директор",Vector2(168,14),Vector2(480,24),12,Color("b8adc7"))
 	button_at(computer_panel,"×",Vector2(714,7),Vector2(32,29),_close_computer)
 	var apps := [["МОЯ ИГРА","project"],["Blender","blender"],["ЖБТ","jbt"],["Поиск","search"],["Блокнот","notebook"],["Grok","grok"]]
@@ -1494,7 +1494,7 @@ func show_desktop() -> void:
 	computer_panel.add_child(taskbar)
 	var start_button := button_at(computer_panel,"Пуск",Vector2(13,355),Vector2(77,36),show_doodle_jump)
 	start_button.name = "StartButton"
-	start_button.tooltip_text = "Запустить мини-игру «Прыжки Грата»"
+	start_button.tooltip_text = "Запустить мини-игру «Прыжки 4fr»"
 	text_at(computer_panel,"СЕЙЧАС: "+goal_label.text,Vector2(106,355),Vector2(544,40),13,Color("d7c6b1"))
 	text_at(computer_panel,"03:47",Vector2(682,360),Vector2(65,25),17)
 	_show_hint("Мышь — выбрать приложение · Esc — выйти из компьютера")
@@ -1512,7 +1512,7 @@ func _show_chapter_launch_action() -> void:
 	card.name = "ChapterLaunchCard"
 	computer_panel.add_child(card)
 	text_at(card,str(label_pair[0]),Vector2(20,22),Vector2(400,28),19,Color("e9d7b3"))
-	text_at(card,"Грат проверит проект и подготовит всё к следующему разговору.",Vector2(20,62),Vector2(400,40),13,Color("d5c6df"))
+	text_at(card,"4fr проверит проект и подготовит всё к следующему разговору.",Vector2(20,62),Vector2(400,40),13,Color("d5c6df"))
 	button_at(card,str(label_pair[1]),Vector2(20,108),Vector2(400,38),_launch_pending_chapter)
 
 func _launch_pending_chapter() -> void:
@@ -1522,11 +1522,11 @@ func _launch_pending_chapter() -> void:
 	chapter_computer_pending = 0
 	computer_open = false
 	var boot_text := {
-		3: "Грат открывает рабочий проект, проверяет сохранение и сворачивает лишние вкладки. На этот раз сначала поговорит с людьми, потом разберётся с окнами.",
-		4: "Грат находит повестку, сверяет номер талона и открывает список документов. В Министерство он пойдёт хотя бы с понятным планом.",
-		5: "Грат раскладывает на рабочем столе переписки и документы по делу. Теперь надо объяснить, зачем он просил помощи и кому принадлежит проект.",
-		6: "Грат делает отдельную копию проекта и открывает историю файлов. В этот раз он проверит, кто и когда менял материалы.",
-		7: "Грат открывает сохранённый проект, проверяет файлы и запускает последнюю сборку. Перед релизом нужно убедиться, что дверь наконец работает."
+		3: "4fr открывает рабочий проект, проверяет сохранение и сворачивает лишние вкладки. На этот раз сначала поговорит с людьми, потом разберётся с окнами.",
+		4: "4fr находит повестку, сверяет номер талона и открывает список документов. В Министерство он пойдёт хотя бы с понятным планом.",
+		5: "4fr раскладывает на рабочем столе переписки и документы по делу. Теперь надо объяснить, зачем он просил помощи и кому принадлежит проект.",
+		6: "4fr делает отдельную копию проекта и открывает историю файлов. В этот раз он проверит, кто и когда менял материалы.",
+		7: "4fr открывает сохранённый проект, проверяет файлы и запускает последнюю сборку. Перед релизом нужно убедиться, что дверь наконец работает."
 	}
 	play_chapter_scene("chapter_computer_boot", [DIALOGUE_TIME.line("narrator","neutral",str(boot_text[chapter]))])
 
@@ -1588,12 +1588,12 @@ func _open_app(id: String) -> void:
 			if step>=Step.BLENDER:
 				show_blender()
 			else:
-				show_info("Blender", "Куб на месте.\nКомпетенции — в процессе загрузки.", "Грат: «У меня сейчас другая задача».")
+				show_info("Blender", "Куб на месте.\nКомпетенции — в процессе загрузки.", "4fr: «У меня сейчас другая задача».")
 		"jbt":
 			if step in [Step.HELP,Step.COMPLAIN,Step.PROMPT]:
 				begin_flow({Step.HELP:"help",Step.COMPLAIN:"complain",Step.PROMPT:"prompt"}[step])
 			else:
-				show_info("ЖБТ", "Теперь нажми «Создать проект».", "История чата заботливо хранит авторский вклад Грата.")
+				show_info("ЖБТ", "Теперь нажми «Создать проект».", "История чата заботливо хранит авторский вклад 4fr.")
 		"search":
 			if step==Step.SEARCH:
 				show_search()
@@ -1611,14 +1611,14 @@ func _open_grok_app() -> void:
 		elif step == Step.COMPLETE:
 			show_ending()
 		else:
-			show_info("Новая вкладка", "Грат: «Сначала сам попробую.\nНу, с ЖБТ. Но это считается».", "До Грок ещё дойдём.")
+			show_info("Новая вкладка", "4fr: «Сначала сам попробую.\nНу, с ЖБТ. Но это считается».", "До Грок ещё дойдём.")
 		return
 	match active_chapter:
 		1:
 			if chapter_one_stage >= 2:
 				show_chapter_one_checkpoint()
 			else:
-				show_info("Грок · сообщения", "Переписка с Грок сохранена. Сейчас Грат разбирается с уликами в своей комнате.", "Текущая глава не сброшена · Назад — к рабочему столу.")
+				show_info("Грок · сообщения", "Переписка с Грок сохранена. Сейчас 4fr разбирается с уликами в своей комнате.", "Текущая глава не сброшена · Назад — к рабочему столу.")
 		2:
 			if chapter_two_complete:
 				show_chapter_two_ending()
@@ -1639,7 +1639,7 @@ func show_doodle_jump() -> void:
 	AchievementManager.unlock_achievement("doodle_jump_found")
 	AudioManager.stop_pc_sfx()
 	AudioManager.play_music("doodle_jump")
-	app_header("ПУСК · ПРЫЖКИ ГРАТА")
+	app_header("ПУСК · ПРЫЖКИ 4fr")
 	mode = "doodle_jump"
 	text_at(app_panel, "A / D или ← / → — двигаться · Esc — назад", Vector2(27, 55), Vector2(690, 24), 12, Color("c3abd7"))
 	doodle_jump_control = DoodleJump.new()
@@ -1732,12 +1732,12 @@ func show_friends_chat(page: String = "artrey") -> void:
 		_phone_button("‹",Vector2(15,68),Vector2(34,38),_close_friends_chat,25,true)
 		var contact := page if page in ["artrey", "grok", "jbt"] else "artrey"
 		_phone_contact_avatar(contact)
-		var display_contact := "Грок" if contact == "grok" else "ЖБТ" if contact == "jbt" else "Артрей"
+		var display_contact := "Грок" if contact == "grok" else "ЖБТ" if contact == "jbt" else "Артбей"
 		text_at(phone_panel,display_contact,Vector2(110,68),Vector2(180,27),17,Color("f4edf9"))
 		text_at(phone_panel,"в сети · сообщения",Vector2(110,94),Vector2(180,17),10,Color("9dcab4"))
 	if active_chapter > 0 and not phone_notes_open:
 		var pages := [
-			["Артрей", "artrey"], ["Грок", "grok"], ["ЖБТ", "jbt"], ["Чернов.", "draft_grok"]
+			["Артбей", "artrey"], ["Грок", "grok"], ["ЖБТ", "jbt"], ["Чернов.", "draft_grok"]
 		]
 		for index in range(pages.size()):
 			var selected := page == str(pages[index][1]) or page.begins_with("draft_") and index == 3
@@ -1759,7 +1759,7 @@ func show_friends_chat(page: String = "artrey") -> void:
 
 func _phone_contact_avatar(contact: String) -> void:
 	var crops := {
-		"artrey": Rect2(52, 18, 280, 280),
+		"artrey": Rect2(160, 20, 800, 800),
 		"grok": Rect2(35, 3, 260, 260),
 		"jbt": Rect2(18, 0, 275, 275),
 	}
@@ -1775,7 +1775,8 @@ func _phone_contact_avatar(contact: String) -> void:
 	backing.add_theme_stylebox_override("panel", backing_style)
 	phone_panel.add_child(backing)
 	if not phone_avatar_textures.has(contact):
-		var source: Texture2D = load("res://assets/portraits/" + contact + "-emotions.png")
+		var source_path := "res://assets/portraits/artrey-portrait.png" if contact == "artrey" else "res://assets/portraits/" + contact + "-emotions.png"
+		var source: Texture2D = load(source_path)
 		var region: Rect2i = Rect2i(crops[contact])
 		phone_avatar_textures[contact] = ImageTexture.create_from_image(source.get_image().get_region(region))
 	var photo := TextureRect.new()
@@ -1820,7 +1821,7 @@ func _phone_button(caption: String, pos: Vector2, area: Vector2, action: Callabl
 	return button
 
 func _show_phone_conversation(contact: String) -> void:
-	var sender: String = str({"artrey":"Артрей", "grok":"Грок", "jbt":"ЖБТ"}.get(contact, "Артрей"))
+	var sender: String = str({"artrey":"Артбей", "grok":"Грок", "jbt":"ЖБТ"}.get(contact, "Артбей"))
 	var outgoing := "▶  0:07\n«Делаю игру. Авторский проект. Всё сам»"
 	var incoming := "Ну что, творческий директор, когда покажешь что-нибудь рабочее?"
 	if contact == "artrey":
@@ -1852,11 +1853,11 @@ func _show_phone_conversation(contact: String) -> void:
 		incoming = "Редкий баг. Покажи сборку." if contact == "grok" else "Сначала сохрани проект, потом обвиняй мебель."
 	var date_label := text_at(phone_panel,"СЕГОДНЯ · " + _time_of_day_text(),Vector2(20,177),Vector2(280,17),10,Color("8f91a4"))
 	date_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_add_friends_chat_bubble("Грат", outgoing, Vector2(76,203), Vector2(220,78), true)
+	_add_friends_chat_bubble("Фотик", outgoing, Vector2(76,203), Vector2(220,78), true)
 	_add_friends_chat_bubble(str(sender), incoming, Vector2(24,290), Vector2(241,89), false)
 	text_at(phone_panel,"✓✓  Доставлено",Vector2(205,382),Vector2(90,15),9,Color("aca1ba"))
 	if contact == "artrey" and story.get_value("hotdog_first_visit_seen",false):
-		_phone_button("К киоску · Артрей  →",Vector2(18,414),Vector2(284,43),func():
+		_phone_button("К киоску · Артбей  →",Vector2(18,414),Vector2(284,43),func():
 			_close_friends_chat()
 			start_hotdog_master(true),12,true)
 	elif contact in ["grok", "jbt"] and active_chapter > 0:
@@ -1990,7 +1991,7 @@ func show_search() -> void:
 
 func submit_search() -> void:
 	if search_input.text.strip_edges().is_empty():
-		search_result.text="Грат даже запрос пока не вставил."
+		search_result.text="4fr даже запрос пока не вставил."
 	elif "bpy" not in search_input.text:
 		search_result.text="Ничего не найдено. Попробуйте вставить скрипт из ЖБТ."
 	else:
@@ -1999,7 +2000,7 @@ func submit_search() -> void:
 func show_notebook() -> void:
 	if mode!="notebook":
 		notebook_from_room=mode=="room"
-	app_header("Блокнот Грата")
+	app_header("Блокнот 4fr")
 	mode="notebook"
 	var pages := ["Хочу игру с глубоким смыслом.","Спросить у ЖБТ, каким.","Нужно: комната, дверь, ключ.\n\nИз этого списка ключ пока сложнее всего.","ЖБТ → "+("Grok. Запрос готов. С заголовком." if step>=Step.GROK else "поможет. Наверное.")]
 	text_at(app_panel,pages[page],Vector2(34,116),Vector2(690,145),24)
@@ -2013,12 +2014,12 @@ func show_notebook() -> void:
 func show_project_files() -> void:
 	app_header("МОЯ ИГРА / исходники и копии")
 	var backed: bool = bool(story.get_value("game_backup_created"))
-	text_at(app_panel,"Автор: Грат\nКомната и тест двери · версия 0.1\nkey.glb — отсутствует\n\n" + ("Резервная копия: исходная_комната — сохранена." if backed else "Резервной копии пока нет."),Vector2(28,85),Vector2(695,180),20)
+	text_at(app_panel,"Автор: 4fr\nКомната и тест двери · версия 0.1\nkey.glb — отсутствует\n\n" + ("Резервная копия: исходная_комната — сохранена." if backed else "Резервной копии пока нет."),Vector2(28,85),Vector2(695,180),20)
 	text_at(app_panel,"Копия: исходная_комната / Только чтение. Исходники остаются у тебя.",Vector2(28,270),Vector2(695,45),14,Color("c3abd7"))
 	var copy := button_at(app_panel,"Проверить копию" if backed else "Создать резервную копию",Vector2(28,330),Vector2(340,40),func():
 		if not story.get_value("game_backup_created"):
 			story.set_value("game_backup_created", true)
-			story.set_value("project_backup_snapshot", {"version":"0.1","author":"Грат","scene":"room","door_test":true,"key_missing":true,"created_at":Time.get_datetime_string_from_system()})
+			story.set_value("project_backup_snapshot", {"version":"0.1","author":"4fr","scene":"room","door_test":true,"key_missing":true,"created_at":Time.get_datetime_string_from_system()})
 			save_progress()
 		AchievementManager.report_story_event("project_backup")
 		show_project_files()
@@ -2285,7 +2286,7 @@ func show_chapter_five_ending() -> void:
 	text_at(app_panel,"Альтушка устраивает суд",Vector2(30,90),Vector2(690,55),28)
 	var summary := "Улики приняты: %d / 3." % int(story.get_value("court_evidence_quality",0))
 	if story.get_value("lied_in_court"): summary += "\nСуд зафиксировал ложь."
-	text_at(app_panel,summary + "\nАртрей ждёт разговора о договоре.",Vector2(30,160),Vector2(690,120),20)
+	text_at(app_panel,summary + "\nАртбей ждёт разговора о договоре.",Vector2(30,160),Vector2(690,120),20)
 	_add_ending_actions([
 		{"text":"В комнату","callback":_close_computer},
 		{"text":"Переиграть суд","callback":func():
@@ -2359,9 +2360,9 @@ func show_chapter_six_ending() -> void:
 	AudioManager.play_music("room")
 	text_at(app_panel,"Друг, который всё устроил",Vector2(30,90),Vector2(690,55),28)
 	var summary := "Граф доказательств собран: авторство подтверждено." if story.get_value("artbay_evidence") else "Рабочую копию удалось восстановить, но доказательств для договора не хватило."
-	if story.get_value("artbay_control_taken"): summary += "\nАртрей получил контроль над публикацией."
+	if story.get_value("artbay_control_taken"): summary += "\nАртбей получил контроль над публикацией."
 	elif story.get_value("artbay_contract_signed"): summary += "\nПодписан договор с прозрачными ролями и титрами."
-	else: summary += "\nРешение о публикации остаётся за Гратом."
+	else: summary += "\nРешение о публикации остаётся за 4fr."
 	text_at(app_panel,summary + "\n\nНаступил вечер последней сборки.",Vector2(30,160),Vector2(690,120),19)
 	_add_ending_actions([
 		{"text":"В комнату","callback":_close_computer},
@@ -2642,28 +2643,28 @@ func _call_event_dialogue(event_id: String) -> Array:
 		"call_drx":
 			return [
 				{"speaker_id":"caller", "speaker":"workersgoincrazy@outlook.com", "text":"Алло, это обма сумаше. Есть предложение: будешь воркать DRX — созваниваться с американцами и проводить с ними сделки на кредиты.", "side":"left"},
-				{"speaker_id":"grat", "speaker":"Грат", "text":"Подожди. То есть я теперь международный специалист?", "side":"right"},
+				{"speaker_id":"grat", "speaker":"4fr", "text":"Подожди. То есть я теперь международный специалист?", "side":"right"},
 				{"speaker_id":"caller", "speaker":"workersgoincrazy@outlook.com", "text":"Ну… примерно. Главное — уверенно говорить «договорились».", "side":"left"},
-				{"speaker_id":"grat", "speaker":"Грат", "text":"Я уже вижу строчку в резюме. «Работал с Америкой». Звучит мощно.", "side":"right"},
+				{"speaker_id":"grat", "speaker":"4fr", "text":"Я уже вижу строчку в резюме. «Работал с Америкой». Звучит мощно.", "side":"right"},
 				{"speaker_id":"caller", "speaker":"workersgoincrazy@outlook.com", "text":"Прости… ахах—", "side":"left"},
-				{"speaker_id":"grat", "speaker":"Грат", "text":"Алло? Связь оборвалась. Наверное, там уже очередь из американцев.", "side":"right"}
+				{"speaker_id":"grat", "speaker":"4fr", "text":"Алло? Связь оборвалась. Наверное, там уже очередь из американцев.", "side":"right"}
 			]
 		"call_tables":
 			return [
 				{"speaker_id":"caller", "speaker":"mlff", "text":"Слушай, есть вариант. Будешь воркать столы.", "side":"left"},
-				{"speaker_id":"grat", "speaker":"Грат", "text":"Столы… Это которые перспективные?", "side":"right"},
+				{"speaker_id":"grat", "speaker":"4fr", "text":"Столы… Это которые перспективные?", "side":"right"},
 				{"speaker_id":"caller", "speaker":"mlff", "text":"Очень. Там столы.", "side":"left"},
-				{"speaker_id":"grat", "speaker":"Грат", "text":"Я так и думал. Сколько там направлений? Я могу быстро освоиться.", "side":"right"},
-				{"speaker_id":"grat", "speaker":"Грат", "text":"Когда начинать?", "side":"right"},
+				{"speaker_id":"grat", "speaker":"4fr", "text":"Я так и думал. Сколько там направлений? Я могу быстро освоиться.", "side":"right"},
+				{"speaker_id":"grat", "speaker":"4fr", "text":"Когда начинать?", "side":"right"},
 				{"speaker_id":"caller", "speaker":"mlff", "text":"АХАХА…", "side":"left"},
-				{"speaker_id":"grat", "speaker":"Грат", "text":"Сбросил. Наверное, пошёл оформлять. Я почти устроился.", "side":"right"}
+				{"speaker_id":"grat", "speaker":"4fr", "text":"Сбросил. Наверное, пошёл оформлять. Я почти устроился.", "side":"right"}
 			]
 		"call_palych":
 			return [
-				{"speaker_id":"caller", "speaker":"Палыч", "text":"Грат, иди работать на Wildberries.", "side":"left"},
-				{"speaker_id":"grat", "speaker":"Грат", "text":"Ахуенно.", "side":"right"},
+				{"speaker_id":"caller", "speaker":"Палыч", "text":"4fr, иди работать на Wildberries.", "side":"left"},
+				{"speaker_id":"grat", "speaker":"4fr", "text":"Ахуенно.", "side":"right"},
 				{"speaker_id":"caller", "speaker":"Палыч", "text":"Вот и договорились. Всё, пока.", "side":"left"},
-				{"speaker_id":"grat", "speaker":"Грат", "text":"Пока.", "side":"right"}
+				{"speaker_id":"grat", "speaker":"4fr", "text":"Пока.", "side":"right"}
 			]
 	return []
 
@@ -2827,13 +2828,13 @@ func show_chapter_two_ending() -> void:
 	mode = "ending"
 	text_at(app_panel,"Свидание в BIOS",Vector2(30,90),Vector2(690,55),28)
 	var dinner_result := "Шеф-повар AMD" if story.get_value("amd_chef_achievement") else "Ужин без технических ингредиентов"
-	var friend_result := "План с Артреем готов." if story.get_value("brainstorm_completed") else ("Артрей остаётся на связи." if story.get_value("artbay_intro_seen") else "Артрей прислал сообщение.")
+	var friend_result := "План с Артбеем готов." if story.get_value("brainstorm_completed") else ("Артбей остаётся на связи." if story.get_value("artbay_intro_seen") else "Артбей прислал сообщение.")
 	_multiline_text_at(app_panel,"Получено: key.txt\nКлючей: 0 · " + dinner_result + "\n" + friend_result + "\n\nСледующий шаг — показать файл ЖБТ.\nГлава 3 доступна по кнопке ниже.",Vector2(30,155),Vector2(690,160),17)
 	var actions: Array = [{"text":"В комнату","callback":_close_computer}]
 	if not story.get_value("artbay_intro_seen"):
-		actions.append({"text":"Чат с Артреем","callback":start_artrey})
+		actions.append({"text":"Чат с Артбеем","callback":start_artrey})
 	elif not story.get_value("brainstorm_completed"):
-		actions.append({"text":"План с Артреем","callback":func(): Early.show_brainstorm(self)})
+		actions.append({"text":"План с Артбеем","callback":func(): Early.show_brainstorm(self)})
 	actions.append({"text":"Глава 3 →","callback":start_chapter_three})
 	_add_ending_actions(actions, 346.0)
 

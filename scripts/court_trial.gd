@@ -35,7 +35,7 @@ func _ready() -> void:
 	progress_label = _label(self,"",Vector2(38,62),Vector2(880,28),15,Color("cbbbd8"))
 	_panel(self,Vector2(32,102),Vector2(896,99),Color("211d2b"))
 	prompt_label = _label(self,"",Vector2(54,120),Vector2(850,66),20,Color("f4e8fb"))
-	_label(self,"ВЫБЕРИ ЛУЧШУЮ УЛИКУ · ошибка не портит дело, после двух промахов будет подсказка",Vector2(38,211),Vector2(730,28),13,Color("b8b3c2"))
+	_label(self,"Сопоставь обвинение с тем, что улика действительно доказывает. После двух ошибок будет подсказка.",Vector2(38,211),Vector2(730,28),12,Color("b8b3c2"))
 	_button(self,"Как играть?",Vector2(781,209),Vector2(145,27),_show_tutorial)
 	for i in range(3):
 		var b := Button.new()
@@ -49,7 +49,7 @@ func _ready() -> void:
 		var detail := _label(b,"",Vector2(10,54),Vector2(266,64),11,Color("d0c4d8"))
 		card_title_labels.append(title)
 		card_detail_labels.append(detail)
-	present_button = _button(self,"Предъявить улику",Vector2(350,401),Vector2(260,48),_submit)
+	present_button = _button(self,"Предъявить выбранную улику",Vector2(350,401),Vector2(260,48),_submit)
 	status_label = _label(self,"",Vector2(44,464),Vector2(870,42),15,Color("d8c8e4"))
 	_build_tutorial()
 	_render()
@@ -112,7 +112,7 @@ func _build_tutorial() -> void:
 	shade.color = Color(0.045,0.03,0.06,0.96)
 	tutorial.add_child(shade)
 	_label(tutorial,"ТРЕНИРОВКА ПЕРЕД СУДОМ",Vector2(148,78),Vector2(660,42),24,Color("f2debe"))
-	_label(tutorial,"Обвинение: «Грат просил помощи только ради ключа». Что покажет весь разговор?",Vector2(148,141),Vector2(664,64),16,Color("eee6f4"))
+	_label(tutorial,"Обвинение: «4fr просил помощи только ради ключа». Что покажет весь разговор?",Vector2(148,141),Vector2(664,64),16,Color("eee6f4"))
 	_button(tutorial,"Полная переписка",Vector2(148,232),Vector2(315,56),func():
 		tutorial_done = true
 		_update_tutorial())
@@ -153,7 +153,7 @@ func _render() -> void:
 		var card: Dictionary = current.cards[i]
 		var detail := str(card.detail)
 		if card.id == "project_history" and bool(story_context.get("project_ownership_proven",false)):
-			detail = "Проверено в Министерстве: первоначальные файлы созданы Гратом."
+			detail = "Проверено в Министерстве: первоначальные файлы созданы 4fr."
 		elif card.id == "ministry_stamp" and bool(story_context.get("stamp_stolen",false)):
 			detail = "Печать украдена: подтверждает нарушение, не авторство."
 		elif card.id == "protocol" and bool(story_context.get("secret_protocol",false)):

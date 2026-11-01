@@ -18,7 +18,7 @@ config/name="Типочек: Ключ"
 config/version="0.2.0-beta"
 config/icon="res://assets/ui/app-icon.png"
 config/description="Top-down pixel-art adventure prototype with an in-game computer."
-run/main_scene="res://MainMenu.tscn"
+run/main_scene="res://Disclaimer.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [autoload]

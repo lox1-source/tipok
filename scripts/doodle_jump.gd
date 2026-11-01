@@ -143,7 +143,7 @@ func _draw() -> void:
 	for star in _stars:
 		var screen_y := fposmod(star.y - _camera_y * 0.18, maxf(_play_area.size.y, 1.0)) + _play_area.position.y
 		draw_rect(Rect2(Vector2(star.x, screen_y), Vector2(2, 2)), Color(0.68, 0.62, 0.81, 0.48), true)
-	draw_string(ThemeDB.fallback_font, Vector2(20, 24), "ГРАТ JUMP", HORIZONTAL_ALIGNMENT_LEFT, 180, 13, Color("e4d3f1"))
+	draw_string(ThemeDB.fallback_font, Vector2(20, 24), "4fr JUMP", HORIZONTAL_ALIGNMENT_LEFT, 180, 13, Color("e4d3f1"))
 	draw_string(ThemeDB.fallback_font, Vector2(size.x - 110, 24), "ВЫСОТА %04d" % _score, HORIZONTAL_ALIGNMENT_RIGHT, 90, 11, Color("e4d3f1"))
 	for platform in _platforms:
 		var rect := Rect2(platform.position.x, platform.position.y - _camera_y, platform.size.x, platform.size.y)

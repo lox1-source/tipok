@@ -80,7 +80,7 @@ func _build_menu() -> void:
 	content.add_theme_constant_override("separation", 5)
 	menu_panel.add_child(content)
 	var caption := Label.new()
-	caption.text = "03:47  /  КОМНАТА ГРАТА"
+	caption.text = "03:47  /  КОМНАТА 4fr"
 	caption.custom_minimum_size.y = 18
 	caption.add_theme_font_size_override("font_size", 12)
 	caption.add_theme_color_override("font_color", Color("b8a6ca"))
@@ -370,7 +370,7 @@ func _build_dev_chapters_page() -> void:
 func _build_dev_minigames_page() -> void:
 	_create_dev_page("minigames", "DEV · ПРЯМОЙ ЗАПУСК МИНИ-ИГР", "Откроется указанная мини-игра без прохождения главы.")
 	var minigames := [
-		{"id":"doodle_jump", "title":"Прыжки Грата · Пуск"},
+		{"id":"doodle_jump", "title":"Прыжки 4fr · Пуск"},
 		{"id":"tab_war", "title":"Война вкладок"},
 		{"id":"wire_puzzle", "title":"Провода · Последняя сборка"},
 		{"id":"office_queue", "title":"Очередь · Окошко 404"},
@@ -381,7 +381,7 @@ func _build_dev_minigames_page() -> void:
 func _build_dev_locations_page() -> void:
 	_create_dev_page("locations", "DEV · ПРЯМОЙ ЗАПУСК ЛОКАЦИИ", "Откроется игровая сцена с управлением, паузой и разговором.")
 	var locations := [
-		{"id":"hotdog_master", "title":"Киоск · Артрей / Хот-дог Мастер"},
+		{"id":"hotdog_master", "title":"Киоск · Артбей / Хот-дог Мастер"},
 		{"id":"digital_archaeology", "title":"Старые проекты · глава 6"}
 	]
 	_add_dev_grid("locations", locations, _launch_dev_minigame, "DevLocation_")
@@ -400,8 +400,8 @@ func _build_dev_endings_picker() -> void:
 	var endings := [
 		{"id":"grok", "title":"Грок · рядом по выбору"},
 		{"id":"jbt", "title":"ЖБТ · партнёрство"},
-		{"id":"artbay", "title":"Артрей · договор"},
-		{"id":"artbay_bad", "title":"Артрей · присвоение"},
+		{"id":"artbay", "title":"Артбей · договор"},
+		{"id":"artbay_bad", "title":"Артбей · присвоение"},
 		{"id":"team", "title":"Общая команда"},
 		{"id":"ministry", "title":"Министерство · Протокол 0"},
 		{"id":"triple", "title":"Превышение симпатии"},

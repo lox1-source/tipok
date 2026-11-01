@@ -7,7 +7,7 @@ signal achievement_unlocked(achievement_id: String)
 
 var save_path := "user://grat_achievements_v1.json"
 var notifications_enabled := true
-const CATEGORIES := ["Сюжет", "Грок", "ЖБТ", "Артрей", "Мини-игры", "Концовки", "Секретные"]
+const CATEGORIES := ["Сюжет", "Грок", "ЖБТ", "Артбей", "Мини-игры", "Концовки", "Секретные"]
 
 const DEFINITIONS: Array[Dictionary] = [
 	{"id":"instrumental_ending", "name":"Я нужен тебе только как инструмент", "description":"Получить плохую концовку отношений.", "category":"Концовки", "icon":"!", "secret":true},
@@ -27,12 +27,12 @@ const DEFINITIONS: Array[Dictionary] = [
 	{"id":"document_84", "name":"Документ на 84 страницы", "description":"Открыть специальную сцену с документом ЖБТ.", "category":"ЖБТ", "icon":"▤"},
 	{"id":"jbt_boundaries", "name":"Границы соблюдены", "description":"Пройти маршрут ЖБТ, уважая её границы и сохраняя доверие.", "category":"ЖБТ", "icon":"◇"},
 	{"id":"jbt_good_ending", "name":"ЖБТ.exe: отношения установлены", "description":"Получить хорошую концовку ЖБТ.", "category":"Концовки", "icon":"Ж", "secret":true},
-	{"id":"artbay_first_chat", "name":"Брат на связи", "description":"Впервые поговорить с Артреем.", "category":"Артрей", "icon":"А"},
-	{"id":"artbay_brainstorm", "name":"Бизнес-план на салфетке", "description":"Завершить мозговой штурм с Артреем.", "category":"Артрей", "icon":"✎"},
-	{"id":"artbay_suspicion", "name":"Есть вопросы, брат", "description":"Впервые обнаружить подозрительное действие Артрея.", "category":"Артрей", "icon":"?"},
-	{"id":"artbay_reveal", "name":"Ничего личного, просто бизнес", "description":"Завершить сцену, в которой Артрей раскрывает свои намерения.", "category":"Артрей", "icon":"!"},
-	{"id":"artbay_good_ending", "name":"Бизнес-партнёры до гроба", "description":"Получить хорошую концовку Артрея.", "category":"Концовки", "icon":"↗", "secret":true},
-	{"id":"artbay_bad_ending", "name":"Миллион на чужой игре", "description":"Открыть концовку, в которой Артрей присваивает игру.", "category":"Концовки", "icon":"$", "secret":true},
+	{"id":"artbay_first_chat", "name":"Брат на связи", "description":"Впервые поговорить с Артбеем.", "category":"Артбей", "icon":"А"},
+	{"id":"artbay_brainstorm", "name":"Бизнес-план на салфетке", "description":"Завершить мозговой штурм с Артбеем.", "category":"Артбей", "icon":"✎"},
+	{"id":"artbay_suspicion", "name":"Есть вопросы, брат", "description":"Впервые обнаружить подозрительное действие Артбея.", "category":"Артбей", "icon":"?"},
+	{"id":"artbay_reveal", "name":"Ничего личного, просто бизнес", "description":"Завершить сцену, в которой Артбей раскрывает свои намерения.", "category":"Артбей", "icon":"!"},
+	{"id":"artbay_good_ending", "name":"Бизнес-партнёры до гроба", "description":"Получить хорошую концовку Артбея.", "category":"Концовки", "icon":"↗", "secret":true},
+	{"id":"artbay_bad_ending", "name":"Миллион на чужой игре", "description":"Открыть концовку, в которой Артбей присваивает игру.", "category":"Концовки", "icon":"$", "secret":true},
 	{"id":"ministry_complete", "name":"Бюрократия побеждена", "description":"Успешно пройти мини-игру Министерства Ключевых Дел.", "category":"Мини-игры", "icon":"▣"},
 	{"id":"ministry_stamp", "name":"Печать решает всё", "description":"Получить печать «ОДОБРЕНО».", "category":"Мини-игры", "icon":"✓"},
 	{"id":"printer_judge", "name":"Судья — принтер", "description":"Завершить судебную мини-игру.", "category":"Мини-игры", "icon":"▤"},
@@ -48,8 +48,8 @@ const DEFINITIONS: Array[Dictionary] = [
 	{"id":"call_drx", "name":"звонок workersgoincrazy@outlook.com", "description":"Дослушать загадочное предложение воркать DRX.", "category":"Сюжет", "icon":"☎", "secret":true},
 	{"id":"call_tables", "name":"звонок mlff", "description":"Узнать о перспективной работе со столами.", "category":"Сюжет", "icon":"☎", "secret":true},
 	{"id":"call_palych", "name":"звонок Палыч", "description":"Согласиться на работу в Wildberries.", "category":"Сюжет", "icon":"☎", "secret":true},
-	{"id":"doodle_jump_found", "name":"Пуск в облака", "description":"Найти и запустить секретную игру на компьютере Грата.", "category":"Мини-игры", "icon":"↑"},
-	{"id":"hotdog_order", "name":"Заказ принят", "description":"Заказать хот-дог в киоске «Хот-дог Мастер».", "category":"Артрей", "icon":"★"}
+	{"id":"doodle_jump_found", "name":"Пуск в облака", "description":"Найти и запустить секретную игру на компьютере 4fr.", "category":"Мини-игры", "icon":"↑"},
+	{"id":"hotdog_order", "name":"Заказ принят", "description":"Заказать хот-дог в киоске «Хот-дог Мастер».", "category":"Артбей", "icon":"★"}
 ]
 
 var unlocked: Dictionary = {}

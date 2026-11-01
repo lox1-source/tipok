@@ -3,6 +3,7 @@ extends Node
 signal achievement_sound_started(achievement_id: String, is_secret: bool, stream_path: String)
 
 const MUSIC_PATHS := {
+	"disclaimer": "res://assets/audio/disclaimer.ogg",
 	"menu": "res://assets/audio/main_menu.ogg",
 	"room": "res://assets/audio/room.ogg",
 	"dialogue": "res://assets/audio/dialogues.ogg",

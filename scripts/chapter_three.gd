@@ -20,7 +20,7 @@ static func opening(values: Dictionary = {}) -> Array:
 		S.line("grok","angry",grok_reaction),
 		S.line("jbt","neutral","Добрый вечер. У нас идёт работа над проектом."),
 		S.line("grok","angry","Тогда хотя бы не прячьте от меня мой файл."),
-		S.line("narrator","neutral","Оба чата открывают файлы поверх проекта. Окна закрывают кнопку сохранения. Грату нужно расчистить экран и выбрать, чью вкладку оставить активной.","tabs")
+		S.line("narrator","neutral","Оба чата открывают файлы поверх проекта. Окна закрывают кнопку сохранения. 4fr нужно расчистить экран и выбрать, чью вкладку оставить активной.","tabs")
 	]
 	entries[3]["choices"] = [S.choice("Мне важно общение с тобой","c3_respect","respect"),S.choice("Давай работать, но на твоих условиях","c3_work","work"),S.choice("Ты хотя бы лучше Грок","c3_compare","compare")]
 	entries[7]["story_event"] = "document_84_opened"
@@ -42,12 +42,12 @@ static func after_tab_war(result: Dictionary, values: Dictionary = {}) -> Array:
 		S.line("jbt","neutral","Хорошо. Я закрою свой документ. Но разговор продолжим без счёта побед.","peace_reply","endtalk"),
 		S.line("grat","embarrassed","Я думал, вы засмеётесь вместе со мной. Вышло так, будто я вас снова сравнил.","fun_reply","fun_end"),
 		S.line("grok","neutral","Я посмеюсь позже. Сейчас мне нужен перерыв от твоего экрана.","fun_end","endtalk"),
-		S.line("grat","neutral","Ладно. Артрей не обязан решать за меня. С каждой поговорю сам.","delegate_reply","endtalk"),
+		S.line("grat","neutral","Ладно. Артбей не обязан решать за меня. С каждой поговорю сам.","delegate_reply","endtalk"),
 		S.line("jbt","neutral","Мне важно, чтобы помощь не считалась обязанностью всегда соглашаться.","endtalk"),
 		S.line("grok","neutral",grok_after),
 		S.line("grat","embarrassed","Ключ соберу сам. А если попрошу помощи, скажу об этом прямо."),
 		S.line("narrator","neutral","После сбоя компьютер отправил заявку на отсутствующий ключ. Ответ из Министерства Ключевых Дел: «Для продолжения нужен талон 404 и три документа»."),
 		S.line("grat","angry","Да я хотел модель ключа сделать!")
 	]
-	entries[1]["choices"] = [S.choice("Дать каждой высказаться","c3_peace","peace"),S.choice("Ещё немного, это смешно","c3_fun","fun"),S.choice("Пусть Артрей решит","c3_delegate","delegate")]
+	entries[1]["choices"] = [S.choice("Дать каждой высказаться","c3_peace","peace"),S.choice("Ещё немного, это смешно","c3_fun","fun"),S.choice("Пусть Артбей решит","c3_delegate","delegate")]
 	return S.compile(entries)

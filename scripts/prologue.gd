@@ -246,7 +246,7 @@ func install_character() -> void:
 			child.hide()
 	sprite = AnimatedSprite2D.new()
 	sprite.name = "GratSprite"
-	sprite.sprite_frames = preload("res://assets/sprites/grat/grat-animations.tres")
+	sprite.sprite_frames = preload("res://assets/sprites/4fr/4fr-animations.tres")
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	sprite.position = Vector2(0, -33.8)
 	sprite.scale = Vector2(0.65,0.65)
@@ -1775,7 +1775,7 @@ func _phone_contact_avatar(contact: String) -> void:
 	backing.add_theme_stylebox_override("panel", backing_style)
 	phone_panel.add_child(backing)
 	if not phone_avatar_textures.has(contact):
-		var source_path := "res://assets/portraits/artrey-portrait.png" if contact == "artrey" else "res://assets/portraits/" + contact + "-emotions.png"
+		var source_path := "res://assets/portraits/artbey-portrait.png" if contact == "artrey" else "res://assets/portraits/" + contact + "-emotions.png"
 		var source: Texture2D = load(source_path)
 		var region: Rect2i = Rect2i(crops[contact])
 		phone_avatar_textures[contact] = ImageTexture.create_from_image(source.get_image().get_region(region))
@@ -2426,8 +2426,8 @@ func show_chapter_seven_ending() -> void:
 	var illustration_names := {
 		"grok":"grok",
 		"jbt":"jbt",
-		"artbay":"artrey",
-		"artbay_bad":"artrey_bad",
+		"artbay":"artbey",
+		"artbay_bad":"artbey_bad",
 		"team":"team",
 		"ministry":"ministry",
 		"triple":"triple",

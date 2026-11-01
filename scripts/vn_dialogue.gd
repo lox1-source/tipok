@@ -331,7 +331,7 @@ func _create_chat_avatar() -> void:
 	_chat_avatar.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	_chat_avatar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var atlas := AtlasTexture.new()
-	atlas.atlas = load("res://assets/portraits/artrey-portrait.png") as Texture2D
+	atlas.atlas = load("res://assets/portraits/artbey-portrait.png") as Texture2D
 	# The portrait file has more space around the head than the emotion sheet,
 	# so the circular icon shows the whole hairstyle and chin instead of a fragment.
 	atlas.region = Rect2(160, 20, 800, 800)
@@ -848,7 +848,7 @@ func _set_portrait(side: String, data: Dictionary, active: bool) -> void:
 
 func _portrait_texture(speaker_id: String, emotion: String, side: String) -> Texture2D:
 	if speaker_id == "artrey":
-		var artrey_sheet := load("res://assets/portraits/artrey-emotions.png") as Texture2D
+		var artrey_sheet := load("res://assets/portraits/artbey-emotions.png") as Texture2D
 		if artrey_sheet == null:
 			return null
 		var expression := EMOTIONS.find(emotion)
@@ -866,7 +866,8 @@ func _portrait_texture(speaker_id: String, emotion: String, side: String) -> Tex
 		return null
 	if emotion not in EMOTIONS:
 		emotion = "neutral"
-	var texture_path := "res://assets/portraits/%s-emotions.png" % speaker_id
+	var portrait_file_id := "4fr" if speaker_id == "grat" else speaker_id
+	var texture_path := "res://assets/portraits/%s-emotions.png" % portrait_file_id
 	var atlas_source := load(texture_path) as Texture2D
 	if atlas_source == null:
 		return null

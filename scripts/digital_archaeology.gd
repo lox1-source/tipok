@@ -96,7 +96,7 @@ func _ready() -> void:
 	connect_button = _button("Сопоставить источники",Vector2(642,438),Vector2(280,35),_connect)
 	_button("Забрать копию и уйти",Vector2(642,480),Vector2(280,34),_leave_with_backup)
 	explorer = AnimatedSprite2D.new()
-	explorer.sprite_frames = preload("res://assets/sprites/grat/grat-animations.tres")
+	explorer.sprite_frames = preload("res://assets/sprites/4fr/4fr-animations.tres")
 	explorer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	explorer.scale = Vector2(0.5,0.5)
 	explorer.position = explorer_pos

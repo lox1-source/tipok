@@ -1,0 +1,237 @@
+{
+	"cell": [
+		128,
+		128
+	],
+	"frames": [
+		{
+			"direction": "down",
+			"feet": [
+				64,
+				116
+			],
+			"frame": 0,
+			"rect": [
+				0,
+				0,
+				128,
+				128
+			]
+		},
+		{
+			"direction": "down",
+			"feet": [
+				64,
+				116
+			],
+			"frame": 1,
+			"rect": [
+				128,
+				0,
+				128,
+				128
+			]
+		},
+		{
+			"direction": "down",
+			"feet": [
+				64,
+				116
+			],
+			"frame": 2,
+			"rect": [
+				256,
+				0,
+				128,
+				128
+			]
+		},
+		{
+			"direction": "down",
+			"feet": [
+				64,
+				116
+			],
+			"frame": 3,
+			"rect": [
+				384,
+				0,
+				128,
+				128
+			]
+		},
+		{
+			"direction": "left",
+			"feet": [
+				64,
+				116
+			],
+			"frame": 0,
+			"rect": [
+				0,
+				128,
+				128,
+				128
+			]
+		},
+		{
+			"direction": "left",
+			"feet": [
+				64,
+				116
+			],
+			"frame": 1,
+			"rect": [
+				128,
+				128,
+				128,
+				128
+			]
+		},
+		{
+			"direction": "left",
+			"feet": [
+				64,
+				116
+			],
+			"frame": 2,
+			"rect": [
+				256,
+				128,
+				128,
+				128
+			]
+		},
+		{
+			"direction": "left",
+			"feet": [
+				64,
+				116
+			],
+			"frame": 3,
+			"rect": [
+				384,
+				128,
+				128,
+				128
+			]
+		},
+		{
+			"direction": "right",
+			"feet": [
+				64,
+				116
+			],
+			"frame": 0,
+			"rect": [
+				0,
+				256,
+				128,
+				128
+			]
+		},
+		{
+			"direction": "right",
+			"feet": [
+				64,
+				116
+			],
+			"frame": 1,
+			"rect": [
+				128,
+				256,
+				128,
+				128
+			]
+		},
+		{
+			"direction": "right",
+			"feet": [
+				64,
+				116
+			],
+			"frame": 2,
+			"rect": [
+				256,
+				256,
+				128,
+				128
+			]
+		},
+		{
+			"direction": "right",
+			"feet": [
+				64,
+				116
+			],
+			"frame": 3,
+			"rect": [
+				384,
+				256,
+				128,
+				128
+			]
+		},
+		{
+			"direction": "up",
+			"feet": [
+				64,
+				116
+			],
+			"frame": 0,
+			"rect": [
+				0,
+				384,
+				128,
+				128
+			]
+		},
+		{
+			"direction": "up",
+			"feet": [
+				64,
+				116
+			],
+			"frame": 1,
+			"rect": [
+				128,
+				384,
+				128,
+				128
+			]
+		},
+		{
+			"direction": "up",
+			"feet": [
+				64,
+				116
+			],
+			"frame": 2,
+			"rect": [
+				256,
+				384,
+				128,
+				128
+			]
+		},
+		{
+			"direction": "up",
+			"feet": [
+				64,
+				116
+			],
+			"frame": 3,
+			"rect": [
+				384,
+				384,
+				128,
+				128
+			]
+		}
+	],
+	"image": "4fr-sheet.png",
+	"size": [
+		512,
+		512
+	]
+}

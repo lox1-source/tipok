@@ -7,7 +7,7 @@ const PLATFORM_WIDTH := 68.0
 const PLATFORM_GAP_MIN := 48.0
 const PLATFORM_GAP_MAX := 56.0
 const PLATFORM_MAX_DRIFT := 96.0
-const GRAT_SPRITE := preload("res://assets/sprites/minigames/grat-jump.png")
+const GRAT_SPRITE := preload("res://assets/sprites/minigames/4fr-jump.png")
 const GRAT_SOURCE_RECT := Rect2(236.0, 84.0, 804.0, 1044.0)
 
 var _rng := RandomNumberGenerator.new()

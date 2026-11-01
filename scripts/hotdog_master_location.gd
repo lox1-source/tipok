@@ -82,7 +82,7 @@ func _ready() -> void:
 	sign_label.add_theme_color_override("font_outline_color",Color("25131d"))
 	sign_label.add_theme_constant_override("outline_size",3)
 	artrey_sprite = Sprite2D.new()
-	artrey_sprite.texture = preload("res://assets/sprites/locations/artrey_kiosk.png")
+	artrey_sprite.texture = preload("res://assets/sprites/locations/artbey_kiosk.png")
 	artrey_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	artrey_sprite.scale = Vector2(0.16,0.16)
 	artrey_sprite.position = ARTREY_POSITION
@@ -97,7 +97,7 @@ func _ready() -> void:
 	kiosk_hud_nodes.append(prompt_label)
 	player = AnimatedSprite2D.new()
 	player.name = "GratAtKiosk"
-	player.sprite_frames = preload("res://assets/sprites/grat/grat-animations.tres")
+	player.sprite_frames = preload("res://assets/sprites/4fr/4fr-animations.tres")
 	player.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	player.scale = Vector2(1.6,1.6)
 	player.position = player_position
